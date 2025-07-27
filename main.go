@@ -1,9 +1,9 @@
 package main
 
 import (
-	"boilerplate/database"
-	"boilerplate/models"
-	"boilerplate/routers"
+	"survielx-backend/database"
+	"survielx-backend/models"
+	"survielx-backend/routers"
 )
 
 func main() {

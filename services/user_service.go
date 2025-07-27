@@ -1,8 +1,8 @@
 package services
 
 import (
-	"boilerplate/database"
-	"boilerplate/models"
+	"survielx-backend/database"
+	"survielx-backend/models"
 )
 
 func CreateUser(user *models.User) error {

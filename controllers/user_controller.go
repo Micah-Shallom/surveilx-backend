@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"boilerplate/models"
-	"boilerplate/services"
 	"net/http"
+	"survielx-backend/models"
+	"survielx-backend/services"
 
 	"github.com/gin-gonic/gin"
 )
