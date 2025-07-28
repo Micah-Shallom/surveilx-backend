@@ -15,12 +15,14 @@ var validate = validator.New()
 func Register(c *gin.Context) {
 	var input models.RegisterInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
 	if err := validate.Struct(input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
@@ -30,34 +32,38 @@ func Register(c *gin.Context) {
 		Password: input.Password,
 	}
 
-	code, err := services.Register(&user)
+	createdUser, code, err := services.Register(&user)
 	if err != nil {
-		rd := utility.BuildErrorResponse(code, "error", "failed to create users", err.Error(), nil)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to register user", err.Error(), nil)
 		c.JSON(code, rd)
 		return
 	}
 
-	rd := utility.BuildSuccessResponse(code, "User successfully registered", nil)
-	c.JSON(http.StatusOK, rd)
+	rd := utility.BuildSuccessResponse(code, "User successfully registered", createdUser)
+	c.JSON(code, rd)
 }
 
 func Login(c *gin.Context) {
 	var input models.LoginInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
 	if err := validate.Struct(input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
-	token, err := services.Login(input.Email, input.Password)
+	user, code, err := services.Login(input.Email, input.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		rd := utility.BuildErrorResponse(code, "error", "Login failed", err.Error(), nil)
+		c.JSON(code, rd)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	rd := utility.BuildSuccessResponse(http.StatusOK, "Login successful", user)
+	c.JSON(http.StatusOK, rd)
 }

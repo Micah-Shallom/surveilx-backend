@@ -13,7 +13,7 @@ func SetupRouter() *gin.Engine {
 	AuthRoutes(r)
 
 	authorized := r.Group("/")
-	authorized.Use(middleware.RequireAuth)
+	authorized.Use(middleware.AuthMiddleware())
 	{
 		authorized.GET("/users", controllers.GetUsers)
 	}

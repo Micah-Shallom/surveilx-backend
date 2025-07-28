@@ -1,59 +1,66 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
-	"survielx-backend/database"
-	"survielx-backend/models"
-	"time"
+	"survielx-backend/services"
+	"survielx-backend/utility"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func RequireAuth(c *gin.Context) {
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
-		return
-	}
-
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	if tokenString == authHeader {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Could not find bearer token in Authorization header"})
-		return
-	}
-
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(os.Getenv("JWT_SECRET")), nil
-	})
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-		return
-	}
-
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token expired"})
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Authorization header is required", nil, nil)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
 			return
 		}
 
-		var user models.User
-		database.DB.First(&user, "id = ?", claims["sub"])
-
-		if user.ID == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
+			rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Invalid token format", nil, nil)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
 			return
 		}
 
-		c.Set("user", user)
-		c.Next()
-	} else {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, jwt.ErrSignatureInvalid
+			}
+			return []byte(os.Getenv("JWT_SECRET")), nil
+		})
+
+		if err != nil {
+			if err == jwt.ErrTokenExpired {
+				// Attempt to refresh the token
+				newToken, err := services.RefreshToken(tokenString)
+				if err != nil {
+					rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Failed to refresh token", err.Error(), nil)
+					c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
+					return
+				}
+				c.Header("X-Refreshed-Token", newToken)
+				claims, _ := token.Claims.(jwt.MapClaims)
+				c.Set("user_id", claims["sub"])
+				c.Next()
+				return
+
+			}
+			rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Invalid token", err.Error(), nil)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
+			return
+		}
+
+		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+			c.Set("user_id", claims["sub"])
+			c.Next()
+		} else {
+			rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Invalid token", nil, nil)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
+		}
 	}
 }

@@ -2,43 +2,56 @@ package services
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"survielx-backend/database"
 	"survielx-backend/models"
-	"survielx-backend/utility"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
-func Register(user *models.User) (int,error) {
+func Register(user *models.User) (*models.User, int, error) {
+	var existingUser models.User
+	if err := database.DB.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
+		// User already exists, so we log them in instead
+		return loginAndGenerateToken(&existingUser, user.Password)
+	}
+
+	// If user does not exist, create a new one
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return http.StatusBadRequest,err
+		return nil, http.StatusInternalServerError, errors.New("failed to hash password")
 	}
-	user.ID = utility.GenerateUUID()
-
 	user.Password = string(hashedPassword)
-	result := database.DB.Create(user)
-	if result.Error != nil {
-		return http.StatusInternalServerError, fmt.Errorf("Failed to create user")
+
+	if err := database.DB.Create(user).Error; err != nil {
+		return nil, http.StatusInternalServerError, errors.New("failed to create user")
 	}
-	return http.StatusOK, nil
+
+	// After creating the user, log them in to generate a token
+	return loginAndGenerateToken(user, user.Password)
 }
 
-func Login(email string, password string) (string, error) {
+func Login(email string, password string) (*models.User, int, error) {
 	var user models.User
-	result := database.DB.Where("email = ?", email).First(&user)
-	if result.Error != nil {
-		return "", errors.New("invalid email or password")
+	if err := database.DB.Where("email = ?", email).First(&user).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, http.StatusUnauthorized, errors.New("invalid email or password")
+		}
+		return nil, http.StatusInternalServerError, errors.New("database error")
 	}
 
+	return loginAndGenerateToken(&user, password)
+}
+
+// loginAndGenerateToken handles user login and token generation.
+func loginAndGenerateToken(user *models.User, password string) (*models.User, int, error) {
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return "", errors.New("invalid email or password")
+		return nil, http.StatusUnauthorized, errors.New("invalid email or password")
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -48,8 +61,31 @@ func Login(email string, password string) (string, error) {
 
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
+		return nil, http.StatusInternalServerError, errors.New("failed to create token")
+	}
+
+	user.Token = tokenString
+	return user, http.StatusOK, nil
+}
+
+func RefreshToken(tokenString string) (string, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	})
+
+	if err != nil && err != jwt.ErrTokenExpired {
 		return "", err
 	}
 
-	return tokenString, nil
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", jwt.ErrInvalidKey
+	}
+
+	claims["exp"] = time.Now().Add(time.Hour * 24 * 30).Unix()
+	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return newToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
 }
