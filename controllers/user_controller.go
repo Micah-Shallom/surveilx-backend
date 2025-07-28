@@ -17,6 +17,17 @@ func GetUsers(c *gin.Context) {
 		return
 	}
 
-	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched users", users)
+	var userResponses []models.UserResponse
+	for _, u := range users {
+		userResponses = append(userResponses, models.UserResponse{
+			ID:        u.ID,
+			Name:      u.Name,
+			Email:     u.Email,
+			Role:      u.Role,
+			CreatedAt: u.CreatedAt,
+		})
+	}
+
+	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched users", userResponses)
 	c.JSON(http.StatusOK, rd)
 }

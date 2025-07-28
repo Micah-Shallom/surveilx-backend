@@ -20,6 +20,10 @@ func Register(user *models.User) (*models.User, int, error) {
 		return loginAndGenerateToken(&existingUser, user.Password)
 	}
 
+	if user.Role == "" {
+		user.Role = "user"
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, http.StatusInternalServerError, errors.New("failed to hash password")
@@ -53,8 +57,9 @@ func loginAndGenerateToken(user *models.User, password string) (*models.User, in
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
-		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+		"sub":  user.ID,
+		"role": user.Role,
+		"exp":  time.Now().Add(time.Hour * 24 * 30).Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))

@@ -47,6 +47,14 @@ func GetVehicleLogs(userId string) (*[]models.VehicleLog, int, error) {
 	return &logs, http.StatusOK, nil
 }
 
+func GetAllVehicleLogs() ([]models.VehicleLog, int, error) {
+	var logs []models.VehicleLog
+	if err := database.DB.Preload("User").Preload("Vehicle").Find(&logs).Error; err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	return logs, http.StatusOK, nil
+}
+
 func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool) (*models.VehicleLog, int, error) {
 	log := models.VehicleLog{
 		VehicleID: vehicle.ID,
