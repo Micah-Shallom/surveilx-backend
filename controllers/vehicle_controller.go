@@ -29,6 +29,7 @@ func RegisterVehicle(c *gin.Context) {
 		PlateNumber: input.PlateNumber,
 		Model:       input.Model,
 		Color:       input.Color,
+		Type:        input.Type,
 	}
 
 	createdVehicle, code, err := services.RegisterVehicle(&vehicle)

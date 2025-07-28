@@ -8,14 +8,15 @@ import (
 )
 
 type Vehicle struct {
-	ID        string `gorm:"type:uuid;primary_key;"`
-	UserID    string `gorm:"type:uuid;"`
-	User      User
-	PlateNumber string `json:"plate_number" gorm:"unique"`
-	Model     string `json:"model"`
-	Color     string `json:"color"`
-	CreatedAt time.Time      `json:"createdAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt"`
+	ID          string         `json:"id" gorm:"type:uuid;primary_key;"`
+	UserID      string         `json:"user_id" gorm:"type:uuid;"`
+	User        User           `json:"user" gorm:"foreignKey:UserID"`
+	PlateNumber string         `json:"plate_number" gorm:"unique"`
+	Type        string         `json:"type" validate:"oneof=bus car bike"`
+	Model       string         `json:"model"`
+	Color       string         `json:"color"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"deletedAt"`
 }
 
 func (vehicle *Vehicle) BeforeCreate(tx *gorm.DB) (err error) {
@@ -24,13 +25,13 @@ func (vehicle *Vehicle) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type VehicleLog struct {
-	ID        string `gorm:"type:uuid;primary_key;"`
-	VehicleID string `gorm:"type:uuid;"`
-	Vehicle   Vehicle
-	UserID    string `gorm:"type:uuid;"`
-	User      User
-	Timestamp time.Time `json:"timestamp"`
-	IsEntry   bool      `json:"is_entry"`
+	ID        string         `json:"id" gorm:"type:uuid;primary_key;"`
+	VehicleID string         `json:"uuid" gorm:"type:uuid;"`
+	Vehicle   Vehicle        `json:"vehicle" gorm:"foreignKey:VehicleID"`
+	UserID    string         `json:"user_id" gorm:"type:uuid;"`
+	User      User           `json:"user" gorm:"foreignKey:UserID"`
+	Timestamp time.Time      `json:"timestamp"`
+	IsEntry   bool           `json:"is_entry"`
 	CreatedAt time.Time      `json:"createdAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt"`
 }

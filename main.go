@@ -16,7 +16,11 @@ func main() {
 	}
 
 	database.ConnectDatabase()
-	database.DB.AutoMigrate(&models.User{}, &models.Vehicle{}, &models.VehicleLog{})
+	database.DB.AutoMigrate(
+		&models.User{}, 
+		&models.Vehicle{}, 
+		&models.VehicleLog{},
+	)
 
 	r := routers.SetupRouter()
 	r.Run()
