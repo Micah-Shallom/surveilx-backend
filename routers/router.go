@@ -9,6 +9,7 @@ func SetupRouter() *gin.Engine {
 
 	AuthRoutes(r)
 	UsersRoutes(r)
+	VehicleRoutes(r)
 
 	return r
 }
