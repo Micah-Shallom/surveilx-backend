@@ -9,8 +9,14 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	r.POST("/users", controllers.CreateUser)
-	r.GET("/users", controllers.GetUsers)
+	r.POST("/register", controllers.Register)
+	r.POST("/login", controllers.Login)
+
+	authorized := r.Group("/")
+	authorized.Use(middleware.RequireAuth)
+	{
+		authorized.GET("/users", controllers.GetUsers)
+	}
 
 	return r
 }
