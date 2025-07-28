@@ -79,24 +79,7 @@ func RegisterGuestVehicle(c *gin.Context) {
 		return
 	}
 
-	userResponse := models.UserResponse{
-		ID:        createdVehicle.User.ID,
-		Name:      createdVehicle.User.Name,
-		Email:     createdVehicle.User.Email,
-		Role:      createdVehicle.User.Role,
-		CreatedAt: createdVehicle.User.CreatedAt,
-	}
-	response := models.VehicleResponse{
-		ID:          createdVehicle.ID,
-		UserID:      createdVehicle.UserID,
-		User:        userResponse,
-		PlateNumber: createdVehicle.PlateNumber,
-		Type:        createdVehicle.Type,
-		Model:       createdVehicle.Model,
-		Color:       createdVehicle.Color,
-		CreatedAt:   createdVehicle.CreatedAt,
-	}
-	rd := utility.BuildSuccessResponse(code, "Vehicle successfully registered", response)
+	rd := utility.BuildSuccessResponse(code, "Vehicle successfully registered", createdVehicle)
 	c.JSON(code, rd)
 }
 
@@ -133,39 +116,6 @@ func GetGuestVehicleLogs(c *gin.Context) {
 		return
 	}
 
-	var logResponses []models.VehicleLogResponse
-	for _, log := range logs {
-		if log.User.Role == "guest" {
-			userResponse := models.UserResponse{
-				ID:        log.User.ID,
-				Name:      log.User.Name,
-				Email:     log.User.Email,
-				Role:      log.User.Role,
-				CreatedAt: log.User.CreatedAt,
-			}
-
-			vehicleResponse := models.VehicleResponse{
-				ID:          log.Vehicle.ID,
-				UserID:      log.Vehicle.UserID,
-				PlateNumber: log.Vehicle.PlateNumber,
-				Type:        log.Vehicle.Type,
-				Model:       log.Vehicle.Model,
-				Color:       log.Vehicle.Color,
-				CreatedAt:   log.Vehicle.CreatedAt,
-			}
-			logResponses = append(logResponses, models.VehicleLogResponse{
-				ID:        log.ID,
-				VehicleID: log.VehicleID,
-				Vehicle:   vehicleResponse,
-				UserID:    log.UserID,
-				User:      userResponse,
-				Timestamp: log.Timestamp,
-				IsEntry:   log.IsEntry,
-				CreatedAt: log.CreatedAt,
-			})
-		}
-	}
-
-	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched guest vehicle logs", logResponses)
+	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched guest vehicle logs", logs)
 	c.JSON(http.StatusOK, rd)
 }

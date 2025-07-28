@@ -2,6 +2,7 @@ package database
 
 import (
 	"os"
+	"survielx-backend/models"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
