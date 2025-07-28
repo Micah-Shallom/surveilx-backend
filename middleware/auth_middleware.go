@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"boilerplate/database"
-	"boilerplate/models"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
+	"survielx-backend/database"
+	"survielx-backend/models"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +32,6 @@ func RequireAuth(c *gin.Context) {
 		}
 		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
-
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 		return
@@ -47,7 +46,7 @@ func RequireAuth(c *gin.Context) {
 		var user models.User
 		database.DB.First(&user, "id = ?", claims["sub"])
 
-		if user.ID == uuid.Nil {
+		if user.ID == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
 			return
 		}

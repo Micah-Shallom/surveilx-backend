@@ -1,7 +1,8 @@
 package routers
 
 import (
-	"boilerplate/controllers"
+	"survielx-backend/controllers"
+	"survielx-backend/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,8 +10,7 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	r.POST("/register", controllers.Register)
-	r.POST("/login", controllers.Login)
+	AuthRoutes(r)
 
 	authorized := r.Group("/")
 	authorized.Use(middleware.RequireAuth)

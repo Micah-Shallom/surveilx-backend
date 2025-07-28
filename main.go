@@ -1,10 +1,10 @@
 package main
 
 import (
-	"boilerplate/database"
-	"boilerplate/models"
-	"boilerplate/routers"
 	"log"
+	"survielx-backend/database"
+	"survielx-backend/models"
+	"survielx-backend/routers"
 
 	"github.com/joho/godotenv"
 )

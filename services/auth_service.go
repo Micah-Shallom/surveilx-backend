@@ -1,24 +1,32 @@
 package services
 
 import (
-	"boilerplate/database"
-	"boilerplate/models"
 	"errors"
+	"fmt"
+	"net/http"
 	"os"
+	"survielx-backend/database"
+	"survielx-backend/models"
+	"survielx-backend/utility"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func Register(user *models.User) error {
+func Register(user *models.User) (int,error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return http.StatusBadRequest,err
 	}
+	user.ID = utility.GenerateUUID()
+
 	user.Password = string(hashedPassword)
 	result := database.DB.Create(user)
-	return result.Error
+	if result.Error != nil {
+		return http.StatusInternalServerError, fmt.Errorf("Failed to create user")
+	}
+	return http.StatusOK, nil
 }
 
 func Login(email string, password string) (string, error) {
