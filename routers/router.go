@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"survielx-backend/controllers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,8 +8,7 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	r.POST("/users", controllers.CreateUser)
-	r.GET("/users", controllers.GetUsers)
-
+	AuthRoutes(r)
+	UsersRoutes(r)
 	return r
 }
