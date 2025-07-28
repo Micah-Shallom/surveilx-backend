@@ -7,6 +7,7 @@ import (
 	"os"
 	"survielx-backend/database"
 	"survielx-backend/models"
+	"survielx-backend/utility"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -18,10 +19,6 @@ func Register(user *models.User) (*models.User, int, error) {
 	var existingUser models.User
 	if err := database.DB.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
 		return loginAndGenerateToken(&existingUser, user.Password)
-	}
-
-	if user.Role == "" {
-		user.Role = "user"
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -56,13 +53,7 @@ func loginAndGenerateToken(user *models.User, password string) (*models.User, in
 		return nil, http.StatusUnauthorized, errors.New("invalid email or password")
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":  user.ID,
-		"role": user.Role,
-		"exp":  time.Now().Add(time.Hour * 24 * 30).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	tokenString, err := utility.GenerateToken(user.ID)
 	if err != nil {
 		return nil, http.StatusInternalServerError, errors.New("failed to create token")
 	}

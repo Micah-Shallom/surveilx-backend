@@ -39,7 +39,6 @@ func RegisterVehicle(c *gin.Context) {
 		return
 	}
 
-
 	rd := utility.BuildSuccessResponse(code, "Vehicle successfully registered", createdVehicle)
 	c.JSON(code, rd)
 }
@@ -71,7 +70,6 @@ func LogVehicle(c *gin.Context) {
 		c.JSON(code, rd)
 		return
 	}
-
 	rd := utility.BuildSuccessResponse(code, "Vehicle log successfully created", log)
 	c.JSON(code, rd)
 }
@@ -84,7 +82,6 @@ func GetVehicleLogs(c *gin.Context) {
 		c.JSON(code, rd)
 		return
 	}
-
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched vehicle logs", logs)
 	c.JSON(http.StatusOK, rd)
 }

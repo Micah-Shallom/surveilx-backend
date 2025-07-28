@@ -2,7 +2,6 @@ package database
 
 import (
 	"os"
-	"survielx-backend/models"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -24,12 +23,4 @@ func ConnectDatabase() {
 	}
 
 	DB = database
-}
-
-func Migrate() {
-	DB.AutoMigrate(&models.User{}, &models.Vehicle{}, &models.VehicleLog{}, &models.Admin{})
-}
-
-func DropTables() {
-	DB.Migrator().DropTable(&models.User{}, &models.Vehicle{}, &models.VehicleLog{}, &models.Admin{})
 }

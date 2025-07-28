@@ -39,14 +39,8 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	response := models.UserResponse{
-		ID:        createdUser.ID,
-		Name:      createdUser.Name,
-		Email:     createdUser.Email,
-		Role:      createdUser.Role,
-		CreatedAt: createdUser.CreatedAt,
-	}
-	rd := utility.BuildSuccessResponse(code, "User successfully registered", response)
+	createdUser.Token, _ = utility.GenerateToken(createdUser.ID)
+	rd := utility.BuildSuccessResponse(code, "User successfully registered", createdUser)
 	c.JSON(code, rd)
 }
 
@@ -71,14 +65,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	response := models.UserResponse{
-		ID:        user.ID,
-		Name:      user.Name,
-		Email:     user.Email,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt,
-	}
-
-	rd := utility.BuildSuccessResponse(http.StatusOK, "Login successful", response)
+	user.Token, _ = utility.GenerateToken(user.ID)
+	rd := utility.BuildSuccessResponse(http.StatusOK, "Login successful", user)
 	c.JSON(http.StatusOK, rd)
 }
