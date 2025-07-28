@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"survielx-backend/database"
@@ -16,11 +17,9 @@ import (
 func Register(user *models.User) (*models.User, int, error) {
 	var existingUser models.User
 	if err := database.DB.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
-		// User already exists, so we log them in instead
 		return loginAndGenerateToken(&existingUser, user.Password)
 	}
 
-	// If user does not exist, create a new one
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, http.StatusInternalServerError, errors.New("failed to hash password")
@@ -28,10 +27,9 @@ func Register(user *models.User) (*models.User, int, error) {
 	user.Password = string(hashedPassword)
 
 	if err := database.DB.Create(user).Error; err != nil {
-		return nil, http.StatusInternalServerError, errors.New("failed to create user")
+		return nil, http.StatusInternalServerError, fmt.Errorf("failed to create user: %v", err)
 	}
 
-	// After creating the user, log them in to generate a token
 	return loginAndGenerateToken(user, user.Password)
 }
 
@@ -69,7 +67,7 @@ func loginAndGenerateToken(user *models.User, password string) (*models.User, in
 }
 
 func RefreshToken(tokenString string) (string, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrSignatureInvalid
 		}
