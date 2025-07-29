@@ -8,6 +8,8 @@ type RegisterVehicleInput struct {
 }
 
 type LogVehicleInput struct {
-	PlateNumber string `json:"plate_number" validate:"required"`
-	IsEntry     bool   `json:"is_entry" validate:"required"`
+	PlateNumber  string `json:"plate_number" validate:"required"`
+	IsEntry      bool   `json:"is_entry"`
+	EntryPointID string `json:"entry_point_id,omitempty"`
+	ExitPointID  string `json:"exit_point_id,omitempty"`
 }

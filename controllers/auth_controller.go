@@ -39,7 +39,6 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	createdUser.Token, _ = utility.GenerateToken(createdUser.ID)
 	rd := utility.BuildSuccessResponse(code, "User successfully registered", createdUser)
 	c.JSON(code, rd)
 }
@@ -65,7 +64,6 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	user.Token, _ = utility.GenerateToken(user.ID)
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Login successful", user)
 	c.JSON(http.StatusOK, rd)
 }

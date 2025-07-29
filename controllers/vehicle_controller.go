@@ -64,7 +64,7 @@ func LogVehicle(c *gin.Context) {
 		return
 	}
 
-	log, code, err := services.CreateVehicleLog(vehicle, input.IsEntry)
+	log, code, err := services.CreateVehicleLog(vehicle, input.IsEntry, input.EntryPointID, input.ExitPointID)
 	if err != nil {
 		rd := utility.BuildErrorResponse(code, "error", "Failed to log vehicle", err.Error(), nil)
 		c.JSON(code, rd)

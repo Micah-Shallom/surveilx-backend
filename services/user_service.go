@@ -14,3 +14,11 @@ func GetUsers(users *[]models.User) error {
 	result := database.DB.Find(users)
 	return result.Error
 }
+
+func GetUserByID(userID string) (models.User, error) {
+	var user models.User
+	if err := database.DB.Where("id = ?", userID).First(&user).Error; err != nil {
+		return user, err
+	}
+	return user, nil
+}

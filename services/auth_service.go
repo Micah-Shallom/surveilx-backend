@@ -7,7 +7,6 @@ import (
 	"os"
 	"survielx-backend/database"
 	"survielx-backend/models"
-	"survielx-backend/utility"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -53,7 +52,12 @@ func loginAndGenerateToken(user *models.User, password string) (*models.User, in
 		return nil, http.StatusUnauthorized, errors.New("invalid email or password")
 	}
 
-	tokenString, err := utility.GenerateToken(user.ID)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": user.ID,
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		return nil, http.StatusInternalServerError, errors.New("failed to create token")
 	}

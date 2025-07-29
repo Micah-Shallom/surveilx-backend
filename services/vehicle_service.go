@@ -47,16 +47,27 @@ func GetVehicleLogs(userId string) (*[]models.VehicleLog, int, error) {
 	return &logs, http.StatusOK, nil
 }
 
-func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool) (*models.VehicleLog, int, error) {
+func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool, entryPointID, exitPointID string) (*models.VehicleLog, int, error) {
 	log := models.VehicleLog{
 		VehicleID: vehicle.ID,
 		UserID:    vehicle.UserID,
 		Timestamp: time.Now(),
 		IsEntry:   isEntry,
 	}
+
+	if entryPointID != "" {
+		log.EntryPointID = &entryPointID
+	}
+
+	if exitPointID != "" {
+		log.ExitPointID = &exitPointID
+	}
+
 	if err := database.DB.Create(&log).Error; err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
+
+	database.DB.Preload("User").Preload("Vehicle").Preload("EntryPoint").Preload("ExitPoint").First(&log, log.ID)
 
 	return &log, http.StatusCreated, nil
 }
