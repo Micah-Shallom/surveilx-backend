@@ -38,9 +38,7 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	profile.Name = input.Name
-
-	if err := services.UpdateProfile(&profile); err != nil {
+	if err := services.UpdateProfile(&profile, input); err != nil {
 		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to update user", err.Error(), nil)
 		c.JSON(http.StatusInternalServerError, rd)
 		return
