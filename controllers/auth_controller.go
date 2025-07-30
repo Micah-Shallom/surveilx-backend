@@ -26,10 +26,15 @@ func Register(c *gin.Context) {
 		return
 	}
 
+	role := "user"
+	if input.Role != "" {
+		role = input.Role
+	}
 	user := models.User{
 		Name:     input.Name,
 		Email:    input.Email,
 		Password: input.Password,
+		Role:     role,
 	}
 
 	createdUser, code, err := services.Register(&user)
