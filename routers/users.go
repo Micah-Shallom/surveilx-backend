@@ -12,5 +12,8 @@ func UsersRoutes(r *gin.Engine) {
 	authorized.Use(middleware.AuthMiddleware())
 	{
 		authorized.GET("/users", controllers.GetUsers)
+		authorized.GET("/profile", controllers.GetProfile)
+		authorized.PUT("/profile", controllers.UpdateProfile)
+		authorized.DELETE("/profile", controllers.DeleteProfile)
 	}
 }

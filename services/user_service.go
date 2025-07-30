@@ -22,3 +22,13 @@ func GetUserByID(userID string) (models.User, error) {
 	}
 	return user, nil
 }
+
+func UpdateUser(user *models.User) error {
+	result := database.DB.Save(user)
+	return result.Error
+}
+
+func DeleteUser(userID string) error {
+	result := database.DB.Delete(&models.User{}, "id = ?", userID)
+	return result.Error
+}

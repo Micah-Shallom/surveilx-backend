@@ -22,3 +22,7 @@ func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
 	user.ID = utility.GenerateUUID()
 	return
 }
+
+type UpdateProfileInput struct {
+	Name string `json:"name"`
+}
