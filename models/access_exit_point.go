@@ -8,7 +8,7 @@ import (
 )
 
 type AccessExitPoint struct {
-	ID        string         `gorm:"type:uuid;primary_key;"`
+	ID        string         `gorm:"type:uuid;primary_key;" json:"id"`
 	Name      string         `json:"name" gorm:"unique"`
 	CreatedAt time.Time      `json:"createdAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt"`

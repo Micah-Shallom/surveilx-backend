@@ -2,6 +2,7 @@ package routers
 
 import (
 	"survielx-backend/controllers"
+	"survielx-backend/middleware"
 
 	"github.com/gin-gonic/gin"
 )
