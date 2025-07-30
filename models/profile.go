@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
+type Profile struct {
 	ID        string         `gorm:"type:uuid;primary_key;"`
 	Name      string         `json:"name"`
 	Email     string         `json:"email" gorm:"unique"`
@@ -18,7 +18,11 @@ type User struct {
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt"`
 }
 
-func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
-	user.ID = utility.GenerateUUID()
+func (profile *Profile) BeforeCreate(tx *gorm.DB) (err error) {
+	profile.ID = utility.GenerateUUID()
 	return
+}
+
+type UpdateProfileInput struct {
+	Name string `json:"name"`
 }
