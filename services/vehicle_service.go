@@ -9,12 +9,19 @@ import (
 )
 
 func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
-	if err := database.DB.Create(vehicle).Error; err != nil {
+	db := database.DB
+
+	checkExists := models.CheckExists(db, &models.Vehicle{}, "plate_number = ?", vehicle.PlateNumber)
+	if checkExists {
+		return nil, http.StatusConflict, fmt.Errorf("vehicle with plate number %s already exists", vehicle.PlateNumber)
+	}
+
+	if err := db.Create(vehicle).Error; err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
 
 	var fullVehicle models.Vehicle
-	if err := database.DB.
+	if err := db.
 		Preload("User").
 		First(&fullVehicle, "id = ?", vehicle.ID).Error; err != nil {
 		return nil, http.StatusInternalServerError, err
@@ -22,7 +29,6 @@ func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
 
 	return &fullVehicle, http.StatusCreated, nil
 }
-
 
 func GetVehicleByPlateNumber(plateNumber string) (*models.Vehicle, int, error) {
 	var vehicle models.Vehicle
@@ -41,7 +47,7 @@ func LogVehicle(log *models.VehicleLog) (*models.VehicleLog, int, error) {
 
 func GetVehicleLogs(userId string) (*[]models.VehicleLog, int, error) {
 	var logs []models.VehicleLog
-	if err := database.DB.Preload("User").Preload("Vehicle").Where("user_id = ?", userId).Find(&logs).Error; err != nil {
+	if err := database.DB.Where("user_id = ?", userId).Find(&logs).Error; err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
 	return &logs, http.StatusOK, nil
@@ -49,10 +55,10 @@ func GetVehicleLogs(userId string) (*[]models.VehicleLog, int, error) {
 
 func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool, entryPointID, exitPointID string) (*models.VehicleLog, int, error) {
 	log := models.VehicleLog{
-		VehicleID: vehicle.ID,
-		UserID:    vehicle.UserID,
-		Timestamp: time.Now(),
-		IsEntry:   isEntry,
+		VehicleID:    vehicle.ID,
+		UserID:       vehicle.UserID,
+		Timestamp:    time.Now(),
+		IsEntry:      isEntry,
 	}
 
 	if entryPointID != "" {
@@ -66,8 +72,6 @@ func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool, entryPointID, exitP
 	if err := database.DB.Create(&log).Error; err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
-
-	database.DB.Preload("User").Preload("Vehicle").Preload("EntryPoint").Preload("ExitPoint").First(&log, log.ID)
 
 	return &log, http.StatusCreated, nil
 }

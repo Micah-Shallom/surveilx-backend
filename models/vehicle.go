@@ -25,19 +25,15 @@ func (vehicle *Vehicle) BeforeCreate(tx *gorm.DB) (err error) {
 }
 
 type VehicleLog struct {
-	ID            string          `json:"id" gorm:"type:uuid;primary_key;"`
-	VehicleID     string          `json:"uuid" gorm:"type:uuid;"`
-	Vehicle       Vehicle         `json:"vehicle" gorm:"foreignKey:VehicleID"`
-	UserID        string          `json:"user_id" gorm:"type:uuid;"`
-	User          User            `json:"user" gorm:"foreignKey:UserID"`
-	Timestamp     time.Time       `json:"timestamp"`
-	IsEntry       bool            `json:"is_entry"`
-	EntryPointID  *string         `json:"entry_point_id" gorm:"type:uuid"`
-	EntryPoint    AccessExitPoint `json:"entry_point" gorm:"foreignKey:EntryPointID"`
-	ExitPointID   *string         `json:"exit_point_id" gorm:"type:uuid"`
-	ExitPoint     AccessExitPoint `json:"exit_point" gorm:"foreignKey:ExitPointID"`
-	CreatedAt     time.Time       `json:"createdAt"`
-	DeletedAt     gorm.DeletedAt  `gorm:"index" json:"deletedAt"`
+	ID           string          `json:"id" gorm:"type:uuid;primary_key;"`
+	VehicleID    string          `json:"vehicle_id" gorm:"type:uuid;"`
+	UserID       string          `json:"user_id" gorm:"type:uuid;"`
+	IsEntry      bool            `json:"is_entry"`
+	EntryPointID *string         `json:"entry_point_id" gorm:"type:uuid"`
+	ExitPointID  *string         `json:"exit_point_id" gorm:"type:uuid"`
+	CreatedAt    time.Time       `json:"createdAt"`
+	Timestamp    time.Time       `json:"timestamp"`
+	DeletedAt    gorm.DeletedAt  `gorm:"index" json:"deletedAt"`
 }
 
 func (vehicleLog *VehicleLog) BeforeCreate(tx *gorm.DB) (err error) {
