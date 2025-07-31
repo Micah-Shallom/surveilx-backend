@@ -14,7 +14,7 @@ type RegisterGuestInput struct {
 	PlateNumber string `json:"plate_number" binding:"required"`
 	Model       string `json:"model"`
 	Color       string `json:"color"`
-	Type        string `json:"type" validate:"oneof=bus car bike"`
+	Type        string `json:"type" validate:"required,oneof=bus car bike"`
 }
 
 func RegisterGuest(c *gin.Context) {

@@ -64,29 +64,3 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 	}
 }
-
-func SecurityMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		userID, exists := c.Get("user_id")
-		if !exists {
-			rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "User ID not found in context", nil, nil)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
-			return
-		}
-
-		user, err := services.GetUserByID(userID.(string))
-		if err != nil {
-			rd := utility.BuildErrorResponse(http.StatusNotFound, "error", "User not found", err.Error(), nil)
-			c.AbortWithStatusJSON(http.StatusNotFound, rd)
-			return
-		}
-
-		if user.Role != "security" {
-			rd := utility.BuildErrorResponse(http.StatusForbidden, "error", "Forbidden", "You are not authorized to perform this action", nil)
-			c.AbortWithStatusJSON(http.StatusForbidden, rd)
-			return
-		}
-
-		c.Next()
-	}
-}
