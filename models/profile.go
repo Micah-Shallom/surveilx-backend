@@ -9,15 +9,14 @@ import (
 
 type Profile struct {
 	ID            string         `gorm:"type:uuid;primary_key;" json:"id"`
-	UserID        string         `gorm:"type:uuid;not null" json:"user_id"` // Link to users table
+	UserID        string         `gorm:"type:uuid;not null" json:"user_id"` 
 	FirstName     string         `gorm:"type:varchar(100);not null" json:"first_name"`
 	LastName      string         `gorm:"type:varchar(100);not null" json:"last_name"`
 	Email         string         `gorm:"unique;not null" json:"email"`
-	Phone         string         `gorm:"type:varchar(20)" json:"phone,omitempty"` // Useful for alerts
+	Phone         string         `gorm:"type:varchar(20)" json:"phone,omitempty"` 
 	AvatarURL     string         `gorm:"type:varchar(255)" json:"avatar_url,omitempty"`
-	DateOfBirth   *time.Time     `gorm:"type:date" json:"date_of_birth,omitempty"`      
-	Department    string         `gorm:"type:varchar(100)" json:"department,omitempty"` // Optional, depending on school
-	IsBlacklisted bool           `gorm:"default:false" json:"is_blacklisted"`           // For flagged users
+	Department    string         `gorm:"type:varchar(100)" json:"department,omitempty"` 
+	IsBlacklisted bool           `gorm:"default:false" json:"is_blacklisted"`          
 	CreatedAt     time.Time      `json:"created_at"`
 	UpdatedAt     time.Time      `json:"updated_at"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
