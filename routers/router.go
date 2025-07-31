@@ -12,7 +12,8 @@ func SetupRouter() *gin.Engine {
 	VehicleRoutes(r)
 	AccessExitPointRoutes(r)
 	VerifyRoutes(r)
-	GuestRoutes(r)
+	WatchlistRoutes(r)
+	GuestLogRoutes(r)
 
 	return r
 }
