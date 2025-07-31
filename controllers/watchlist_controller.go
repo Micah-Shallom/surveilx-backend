@@ -10,15 +10,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type RegisterGuestInput struct {
+type AddToWatchlistInput struct {
 	PlateNumber string `json:"plate_number" binding:"required"`
 	Model       string `json:"model"`
 	Color       string `json:"color"`
 	Type        string `json:"type" validate:"oneof=bus car bike"`
 }
 
-func RegisterGuest(c *gin.Context) {
-	var input RegisterGuestInput
+func AddToWatchlist(c *gin.Context) {
+	var input AddToWatchlistInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
@@ -26,7 +26,7 @@ func RegisterGuest(c *gin.Context) {
 	}
 
 	userID := c.MustGet("user_id").(string)
-	guest := models.Guest{
+	watchlist := models.Watchlist{
 		PlateNumber:  input.PlateNumber,
 		Model:        input.Model,
 		Color:        input.Color,
@@ -34,18 +34,18 @@ func RegisterGuest(c *gin.Context) {
 		RegisteredBy: userID,
 	}
 
-	createdGuest, code, err := services.RegisterGuest(&guest)
+	createdWatchlist, code, err := services.AddToWatchlist(&watchlist)
 	if err != nil {
-		rd := utility.BuildErrorResponse(code, "error", "Failed to register guest", err.Error(), nil)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to add to watchlist", err.Error(), nil)
 		c.JSON(code, rd)
 		return
 	}
 
-	rd := utility.BuildSuccessResponse(code, "Guest successfully registered", createdGuest)
+	rd := utility.BuildSuccessResponse(code, "Successfully added to watchlist", createdWatchlist)
 	c.JSON(code, rd)
 }
 
-func GetGuests(c *gin.Context) {
+func GetWatchlist(c *gin.Context) {
 	fromStr := c.DefaultQuery("from", "")
 	toStr := c.DefaultQuery("to", "")
 
@@ -69,13 +69,13 @@ func GetGuests(c *gin.Context) {
 		return
 	}
 
-	guests, code, err := services.GetGuests(from, to)
+	watchlist, code, err := services.GetWatchlist(from, to)
 	if err != nil {
-		rd := utility.BuildErrorResponse(code, "error", "Failed to get guests", err.Error(), nil)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to get watchlist", err.Error(), nil)
 		c.JSON(code, rd)
 		return
 	}
 
-	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched guests", guests)
+	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched watchlist", watchlist)
 	c.JSON(http.StatusOK, rd)
 }

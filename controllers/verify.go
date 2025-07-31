@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"net/http"
-	"survielx-backend/models"
 	"survielx-backend/services"
 	"survielx-backend/utility"
 

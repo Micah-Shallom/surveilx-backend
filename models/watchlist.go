@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type Guest struct {
+type Watchlist struct {
 	ID           string         `gorm:"type:uuid;primary_key;"`
 	PlateNumber  string         `json:"plate_number" gorm:"unique"`
 	Model        string         `json:"model"`
@@ -19,7 +19,7 @@ type Guest struct {
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"deletedAt"`
 }
 
-func (guest *Guest) BeforeCreate(tx *gorm.DB) (err error) {
-	guest.ID = utility.GenerateUUID()
+func (watchlist *Watchlist) BeforeCreate(tx *gorm.DB) (err error) {
+	watchlist.ID = utility.GenerateUUID()
 	return
 }
