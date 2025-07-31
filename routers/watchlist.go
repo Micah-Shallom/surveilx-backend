@@ -7,10 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func UsersRoutes(r *gin.Engine) {
+func WatchlistRoutes(r *gin.Engine) {
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())
 	{
-		authorized.GET("/users", controllers.GetUsers)
+		authorized.POST("/watchlist", middleware.SecurityMiddleware(), controllers.AddToWatchlist)
+		authorized.GET("/watchlist", controllers.GetWatchlist)
 	}
 }

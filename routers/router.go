@@ -1,7 +1,6 @@
 package routers
 
 import (
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,5 +9,11 @@ func SetupRouter() *gin.Engine {
 
 	AuthRoutes(r)
 	UsersRoutes(r)
+	VehicleRoutes(r)
+	AccessExitPointRoutes(r)
+	VerifyRoutes(r)
+	WatchlistRoutes(r)
+	GuestLogRoutes(r)
+
 	return r
 }
