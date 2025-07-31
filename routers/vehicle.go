@@ -14,7 +14,5 @@ func VehicleRoutes(r *gin.Engine) {
 		authorized.POST("/vehicles", controllers.RegisterVehicle)
 		authorized.POST("/vehicles/log", controllers.LogVehicle)
 		authorized.GET("/vehicles/logs", controllers.GetVehicleLogs)
-		authorized.GET("/vehicles", controllers.GetUserVehicles)
-		authorized.GET("/vehicles/:id", controllers.GetVehicle)
 	}
 }

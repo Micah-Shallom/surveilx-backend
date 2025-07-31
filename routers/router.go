@@ -11,7 +11,8 @@ func SetupRouter() *gin.Engine {
 	UsersRoutes(r)
 	VehicleRoutes(r)
 	AccessExitPointRoutes(r)
-	ProfileRoutes(r)
+	VerifyRoutes(r)
+	GuestRoutes(r)
 
 	return r
 }

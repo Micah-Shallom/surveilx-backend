@@ -53,22 +53,6 @@ func GetVehicleLogs(userId string) (*[]models.VehicleLog, int, error) {
 	return &logs, http.StatusOK, nil
 }
 
-func GetUserVehicles(userId string) (*[]models.Vehicle, int, error) {
-	var vehicles []models.Vehicle
-	if err := database.DB.Where("user_id = ?", userId).Find(&vehicles).Error; err != nil {
-		return nil, http.StatusInternalServerError, err
-	}
-	return &vehicles, http.StatusOK, nil
-}
-
-func GetVehicleByID(vehicleId string, userId string) (*models.Vehicle, int, error) {
-	var vehicle models.Vehicle
-	if err := database.DB.Where("id = ? AND user_id = ?", vehicleId, userId).First(&vehicle).Error; err != nil {
-		return nil, http.StatusNotFound, err
-	}
-	return &vehicle, http.StatusOK, nil
-}
-
 func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool, entryPointID, exitPointID string) (*models.VehicleLog, int, error) {
 	log := models.VehicleLog{
 		VehicleID:    vehicle.ID,
