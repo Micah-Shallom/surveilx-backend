@@ -9,7 +9,7 @@ import (
 
 func VerifyRoutes(r *gin.Engine) {
 	authorized := r.Group("/")
-	authorized.Use(middleware.AuthMiddleware())
+	// authorized.Use(middleware.AuthMiddleware())
 	{
 		authorized.POST("/verify-vehicle", controllers.VerifyVehicle)
 	}
