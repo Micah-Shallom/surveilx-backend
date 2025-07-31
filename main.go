@@ -20,7 +20,7 @@ func main() {
 		&models.User{},
 		&models.Vehicle{},
 		&models.VehicleLog{},
-		&models.Profile{},
+		&models.Guest{},
 	)
 
 	r := routers.SetupRouter()

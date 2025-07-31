@@ -85,30 +85,3 @@ func GetVehicleLogs(c *gin.Context) {
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched vehicle logs", logs)
 	c.JSON(http.StatusOK, rd)
 }
-
-func GetUserVehicles(c *gin.Context) {
-	userID := c.MustGet("user_id").(string)
-	vehicles, code, err := services.GetUserVehicles(userID)
-	if err != nil {
-		rd := utility.BuildErrorResponse(code, "error", "Failed to get user vehicles", err.Error(), nil)
-		c.JSON(code, rd)
-		return
-	}
-	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched user vehicles", vehicles)
-	c.JSON(http.StatusOK, rd)
-}
-
-func GetVehicle(c *gin.Context) {
-	vehicleID := c.Param("id")
-	userID := c.MustGet("user_id").(string)
-
-	vehicle, code, err := services.GetVehicleByID(vehicleID, userID)
-	if err != nil {
-		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle", err.Error(), nil)
-		c.JSON(code, rd)
-		return
-	}
-
-	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched vehicle", vehicle)
-	c.JSON(http.StatusOK, rd)
-}
