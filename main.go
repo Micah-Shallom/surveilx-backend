@@ -22,6 +22,7 @@ func main() {
 		&models.VehicleLog{},
 		&models.Watchlist{},
 		&models.GuestLog{},
+		
 	)
 
 	r := routers.SetupRouter()
