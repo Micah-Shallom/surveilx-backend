@@ -55,7 +55,12 @@ func GetVehicleLogs(userId string) (*[]models.VehicleLog, int, error) {
 	return &logs, http.StatusOK, nil
 }
 
-func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool, entryPointID, exitPointID string) (*models.VehicleLog, int, error) {
+func CreateVehicleLog(vehicle *models.Vehicle, req models.LogVehicleInput) (*models.VehicleLog, int, error) {
+	var (
+		isEntry      = req.IsEntry
+		entryPointID = req.EntryPointID
+		exitPointID  = req.ExitPointID	
+	)
 
 	if err := validateVehicleEntryExit(database.DB, vehicle.ID, isEntry); err != nil {
 		return nil, http.StatusBadRequest, err
@@ -66,6 +71,8 @@ func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool, entryPointID, exitP
 		UserID:    vehicle.UserID,
 		Timestamp: time.Now(),
 		IsEntry:   isEntry,
+		Type:      req.Type,
+		CreatedAt: time.Now(),
 	}
 
 	if entryPointID != "" {
