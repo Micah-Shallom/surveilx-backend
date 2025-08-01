@@ -1,18 +1,19 @@
 package routers
 
 import (
+	"survielx-backend/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
+	r.Use(middleware.CORSMiddleware())
 
 	AuthRoutes(r)
 	UsersRoutes(r)
-	VehicleRoutes(r)
+	VehicleActivityRoutes(r)
 	AccessExitPointRoutes(r)
-	VerifyRoutes(r)
-	WatchlistRoutes(r)
 
 	return r
 }

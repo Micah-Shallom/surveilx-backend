@@ -9,7 +9,7 @@ import (
 
 func AccessExitPointRoutes(r *gin.Engine) {
 	access := r.Group("/access-points")
-	access.Use(middleware.AuthMiddleware())
+	access.Use(middleware.AuthMiddleware(), middleware.SecurityMiddleware())
 	{
 		access.POST("/", controllers.CreateAccessExitPoint)
 		access.GET("/", controllers.GetAccessExitPoints)

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"survielx-backend/database"
 	"survielx-backend/models"
 	"survielx-backend/services"
 	"survielx-backend/utility"
@@ -17,9 +18,9 @@ func CreateAccessExitPoint(c *gin.Context) {
 		return
 	}
 
-	if err := services.CreateAccessExitPoint(&point); err != nil {
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to create access exit point", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
+	if err := services.CreateAccessExitPoint(database.DB, &point); err != nil {
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to create access exit point", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
@@ -29,9 +30,9 @@ func CreateAccessExitPoint(c *gin.Context) {
 
 func GetAccessExitPoints(c *gin.Context) {
 	var points []models.AccessExitPoint
-	if err := services.GetAccessExitPoints(&points); err != nil {
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get access exit points", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
+	if err := services.GetAccessExitPoints(database.DB, &points); err != nil {
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to get access exit points", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
@@ -42,7 +43,7 @@ func GetAccessExitPoints(c *gin.Context) {
 func GetAccessExitPoint(c *gin.Context) {
 	id := c.Param("id")
 	var point models.AccessExitPoint
-	if err := services.GetAccessExitPoint(id, &point); err != nil {
+	if err := services.GetAccessExitPoint(database.DB, id, &point); err != nil {
 		rd := utility.BuildErrorResponse(http.StatusNotFound, "error", "Access exit point not found", err.Error(), nil)
 		c.JSON(http.StatusNotFound, rd)
 		return
@@ -54,9 +55,9 @@ func GetAccessExitPoint(c *gin.Context) {
 
 func DeleteAccessExitPoint(c *gin.Context) {
 	id := c.Param("id")
-	if err := services.DeleteAccessExitPoint(id); err != nil {
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to delete access exit point", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
+	if err := services.DeleteAccessExitPoint(database.DB, id); err != nil {
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to delete access exit point", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
@@ -67,7 +68,7 @@ func DeleteAccessExitPoint(c *gin.Context) {
 func UpdateAccessExitPoint(c *gin.Context) {
 	id := c.Param("id")
 	var point models.AccessExitPoint
-	if err := services.GetAccessExitPoint(id, &point); err != nil {
+	if err := services.GetAccessExitPoint(database.DB, id, &point); err != nil {
 		rd := utility.BuildErrorResponse(http.StatusNotFound, "error", "Access exit point not found", err.Error(), nil)
 		c.JSON(http.StatusNotFound, rd)
 		return
@@ -79,9 +80,9 @@ func UpdateAccessExitPoint(c *gin.Context) {
 		return
 	}
 
-	if err := services.UpdateAccessExitPoint(&point); err != nil {
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to update access exit point", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
+	if err := services.UpdateAccessExitPoint(database.DB, &point); err != nil {
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to update access exit point", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 

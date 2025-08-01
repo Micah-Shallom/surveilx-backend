@@ -9,7 +9,7 @@ import (
 
 func UsersRoutes(r *gin.Engine) {
 	authorized := r.Group("/")
-	authorized.Use(middleware.AuthMiddleware())
+	authorized.Use(middleware.AuthMiddleware(), middleware.SecurityMiddleware())
 	{
 		authorized.GET("/users", controllers.GetUsers)
 	}
