@@ -3,16 +3,22 @@ package services
 import (
 	"survielx-backend/database"
 	"survielx-backend/models"
+
+	"gorm.io/gorm"
 )
 
-func CreateUser(user *models.User) error {
-	result := database.DB.Create(user)
+func CreateUser(db *gorm.DB, user *models.User) error {
+	result := db.Create(user)
 	return result.Error
 }
 
-func GetUsers(users *[]models.User) error {
-	result := database.DB.Find(users)
-	return result.Error
+func GetUsers(db *gorm.DB) ([]models.User, error) {
+	var users []models.User
+	result := db.Find(&users)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return users, nil
 }
 
 func GetUserByID(userID string) (models.User, error) {

@@ -13,7 +13,6 @@ func SetupRouter() *gin.Engine {
 	AccessExitPointRoutes(r)
 	VerifyRoutes(r)
 	WatchlistRoutes(r)
-	GuestLogRoutes(r)
 
 	return r
 }

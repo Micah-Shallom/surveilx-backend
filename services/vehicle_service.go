@@ -6,6 +6,8 @@ import (
 	"survielx-backend/database"
 	"survielx-backend/models"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
@@ -54,11 +56,16 @@ func GetVehicleLogs(userId string) (*[]models.VehicleLog, int, error) {
 }
 
 func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool, entryPointID, exitPointID string) (*models.VehicleLog, int, error) {
+
+	if err := validateVehicleEntryExit(database.DB, vehicle.ID, isEntry); err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
 	log := models.VehicleLog{
-		VehicleID:    vehicle.ID,
-		UserID:       vehicle.UserID,
-		Timestamp:    time.Now(),
-		IsEntry:      isEntry,
+		VehicleID: vehicle.ID,
+		UserID:    vehicle.UserID,
+		Timestamp: time.Now(),
+		IsEntry:   isEntry,
 	}
 
 	if entryPointID != "" {
@@ -74,4 +81,81 @@ func CreateVehicleLog(vehicle *models.Vehicle, isEntry bool, entryPointID, exitP
 	}
 
 	return &log, http.StatusCreated, nil
+}
+
+func GetVehicleStatusByPlateNumber(plateNumber string) (string, error) {
+	vehicle, _, err := GetVehicleByPlateNumber(plateNumber)
+	if err != nil {
+		return "", err
+	}
+
+	return GetVehicleStatus(vehicle.ID)
+}
+
+func GetVehicleStatus(vehicleID string) (string, error) {
+	db := database.DB
+	var lastLog models.VehicleLog
+
+	err := db.Where("vehicle_id = ?", vehicleID).
+		Order("timestamp desc").
+		First(&lastLog).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return "outside", nil // Never entered
+		}
+		return "", fmt.Errorf("database error: %v", err)
+	}
+
+	if lastLog.IsEntry {
+		return "inside", nil
+	}
+	return "outside", nil
+}
+
+func GetVehicleLogHistory(vehicleID string, limit int) ([]models.VehicleLog, error) {
+	db := database.DB
+	var logs []models.VehicleLog
+
+	query := db.Where("vehicle_id = ?", vehicleID).Order("timestamp desc")
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	if err := query.Find(&logs).Error; err != nil {
+		return nil, fmt.Errorf("failed to get vehicle log history: %v", err)
+	}
+
+	return logs, nil
+}
+
+func validateVehicleEntryExit(db *gorm.DB, vehicleID string, isEntry bool) error {
+	var lastLog models.VehicleLog
+
+	err := db.Where("vehicle_id = ?", vehicleID).
+		Order("timestamp desc").
+		First(&lastLog).Error
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			if !isEntry {
+				return fmt.Errorf("vehicle must enter before it can exit")
+			}
+			return nil
+		}
+		return fmt.Errorf("database error while checking vehicle logs: %v", err)
+	}
+
+	if isEntry {
+		if lastLog.IsEntry {
+			return fmt.Errorf("vehicle is already inside - cannot enter again without exiting first")
+		}
+	} else {
+		if !lastLog.IsEntry {
+			return fmt.Errorf("vehicle is already outside - cannot exit without entering first")
+		}
+	}
+
+	return nil
 }
