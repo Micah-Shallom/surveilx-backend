@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"net/http"
-	"survielx-backend/models"
+	"survielx-backend/database"
 	"survielx-backend/services"
 	"survielx-backend/utility"
 
@@ -10,8 +10,9 @@ import (
 )
 
 func GetUsers(c *gin.Context) {
-	var users []models.User
-	if err := services.GetUsers(&users); err != nil {
+
+	users, err := services.GetUsers(database.DB)
+	if err != nil {
 		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get users", err.Error(), nil)
 		c.JSON(http.StatusInternalServerError, rd)
 		return

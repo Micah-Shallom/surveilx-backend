@@ -6,12 +6,22 @@ import (
 	"survielx-backend/database"
 	"survielx-backend/models"
 	"time"
+
+	"gorm.io/gorm"
 )
 
-func AddToWatchlist(watchlist *models.Watchlist) (*models.Watchlist, int, error) {
-	db := database.DB
+func AddToWatchlist(db *gorm.DB, req models.LogGuestInput) (*models.GuestWatchList, int, error) {
 
-	checkExists := models.CheckExists(db, &models.Watchlist{}, "plate_number = ?", watchlist.PlateNumber)
+	watchlist := models.GuestWatchList{
+		PlateNumber:  req.PlateNumber,
+		Type:         req.Type,
+		IsEntry:      req.IsEntry,
+		RegisteredBy: req.RegisteredBy,
+		Timestamp:    time.Now(),
+		CreatedAt:    time.Now(),
+	}
+
+	checkExists := models.CheckExists(db, &models.GuestWatchList{}, "plate_number = ?", watchlist.PlateNumber)
 	if checkExists {
 		return nil, http.StatusConflict, fmt.Errorf("watchlist with plate number %s already exists", watchlist.PlateNumber)
 	}
@@ -20,7 +30,7 @@ func AddToWatchlist(watchlist *models.Watchlist) (*models.Watchlist, int, error)
 		return nil, http.StatusInternalServerError, err
 	}
 
-	var fullWatchlist models.Watchlist
+	var fullWatchlist models.GuestWatchList
 	if err := db.
 		Preload("User").
 		First(&fullWatchlist, "id = ?", watchlist.ID).Error; err != nil {
@@ -30,8 +40,8 @@ func AddToWatchlist(watchlist *models.Watchlist) (*models.Watchlist, int, error)
 	return &fullWatchlist, http.StatusCreated, nil
 }
 
-func GetWatchlist(from, to time.Time) (*[]models.Watchlist, int, error) {
-	var watchlist []models.Watchlist
+func GetWatchlist(from, to time.Time) (*[]models.GuestWatchList, int, error) {
+	var watchlist []models.GuestWatchList
 	if err := database.DB.Where("created_at BETWEEN ? AND ?", from, to).Find(&watchlist).Error; err != nil {
 		return nil, http.StatusInternalServerError, err
 	}

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"survielx-backend/database"
 	"survielx-backend/models"
 	"survielx-backend/services"
 	"survielx-backend/utility"
@@ -10,15 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type AddToWatchlistInput struct {
-	PlateNumber string `json:"plate_number" binding:"required"`
-	Model       string `json:"model"`
-	Color       string `json:"color"`
-	Type        string `json:"type" validate:"required,oneof=bus car bike"`
-}
 
-func AddToWatchlist(c *gin.Context) {
-	var input AddToWatchlistInput
+func AddToGuestWatchlist(c *gin.Context) {
+	var input models.LogGuestInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
@@ -26,15 +21,9 @@ func AddToWatchlist(c *gin.Context) {
 	}
 
 	userID := c.MustGet("user_id").(string)
-	watchlist := models.Watchlist{
-		PlateNumber:  input.PlateNumber,
-		Model:        input.Model,
-		Color:        input.Color,
-		Type:         input.Type,
-		RegisteredBy: userID,
-	}
+	input.RegisteredBy = userID
 
-	createdWatchlist, code, err := services.AddToWatchlist(&watchlist)
+	createdWatchlist, code, err := services.AddToWatchlist(database.DB, input)
 	if err != nil {
 		rd := utility.BuildErrorResponse(code, "error", "Failed to add to watchlist", err.Error(), nil)
 		c.JSON(code, rd)
@@ -45,7 +34,7 @@ func AddToWatchlist(c *gin.Context) {
 	c.JSON(code, rd)
 }
 
-func GetWatchlist(c *gin.Context) {
+func GetGuestWatchlist(c *gin.Context) {
 	fromStr := c.DefaultQuery("from", "")
 	toStr := c.DefaultQuery("to", "")
 

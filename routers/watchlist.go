@@ -11,7 +11,7 @@ func WatchlistRoutes(r *gin.Engine) {
 	authorized := r.Group("/")
 	authorized.Use(middleware.AuthMiddleware())
 	{
-		authorized.POST("/watchlist", middleware.SecurityMiddleware(), controllers.AddToWatchlist)
-		authorized.GET("/watchlist", controllers.GetWatchlist)
+		authorized.POST("/watchlist", middleware.SecurityMiddleware(), controllers.AddToGuestWatchlist)
+		authorized.GET("/watchlist", controllers.GetGuestWatchlist)
 	}
 }

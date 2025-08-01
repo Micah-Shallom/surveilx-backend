@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -13,13 +14,6 @@ var DB *gorm.DB
 func ConnectDatabase() {
 	if err := godotenv.Load(); err != nil {
 		panic("Unable to load environment variables")
-	}
-
-	dsn := os.Getenv("POSTGRES_DSN")
-
-	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Println("No .env file found")
 	}
 
 	dsn := os.Getenv("POSTGRES_DSN")

@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"survielx-backend/database"
+	"survielx-backend/middleware"
 	"survielx-backend/models"
 	"survielx-backend/routers"
 
@@ -22,8 +23,12 @@ func main() {
 		&models.VehicleLog{},
 		&models.Watchlist{},
 		&models.GuestLog{},
+		&models.AccessExitPoint{},
+		&models.Profile{},
 	)
 
 	r := routers.SetupRouter()
+	r.Use(middleware.CORSMiddleware())
+
 	r.Run()
 }

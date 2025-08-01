@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 	"survielx-backend/models"
 	"survielx-backend/services"
 	"survielx-backend/utility"
@@ -83,5 +84,58 @@ func GetVehicleLogs(c *gin.Context) {
 		return
 	}
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched vehicle logs", logs)
+	c.JSON(http.StatusOK, rd)
+}
+
+func GetVehicleStatus(c *gin.Context) {
+	plateNumber := c.Param("plateNumber")
+
+	status, err := services.GetVehicleStatusByPlateNumber(plateNumber)
+	if err != nil {
+		rd := utility.BuildErrorResponse(http.StatusNotFound, "error", "Failed to get vehicle status", err.Error(), nil)
+		c.JSON(http.StatusNotFound, rd)
+		return
+	}
+
+	data := map[string]any{
+		"plate_number": plateNumber,
+		"status":       status,
+	}
+
+	rd := utility.BuildSuccessResponse(http.StatusOK, "Vehicle status retrieved successfully", data)
+	c.JSON(http.StatusOK, rd)
+}
+
+// GetVehicleLogHistory returns detailed log history for a vehicle
+func GetVehicleLogHistory(c *gin.Context) {
+	plateNumber := c.Param("plateNumber")
+	limitStr := c.DefaultQuery("limit", "50")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		limit = 50 // Default limit
+	}
+
+	vehicle, _, err := services.GetVehicleByPlateNumber(plateNumber)
+	if err != nil {
+		rd := utility.BuildErrorResponse(http.StatusNotFound, "error", "Vehicle not found", err.Error(), nil)
+		c.JSON(http.StatusNotFound, rd)
+		return
+	}
+
+	logs, err := services.GetVehicleLogHistory(vehicle.ID, limit)
+	if err != nil {
+		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get vehicle log history", err.Error(), nil)
+		c.JSON(http.StatusInternalServerError, rd)
+		return
+	}
+
+	data := map[string]any{
+		"vehicle":    vehicle,
+		"logs":       logs,
+		"total_logs": len(logs),
+	}
+
+	rd := utility.BuildSuccessResponse(http.StatusOK, "Vehicle log history retrieved successfully", data)
 	c.JSON(http.StatusOK, rd)
 }
