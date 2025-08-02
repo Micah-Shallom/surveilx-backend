@@ -1,0 +1,661 @@
+openapi: 3.0.0
+info:
+  title: SurvielX Backend API
+  description: API for managing vehicle access and security in a residential estate.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: Development server
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginInput'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Get all users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /profile:
+    get:
+      tags:
+        - Profile
+      summary: Get user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Profile
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileInput'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /access-exit-points:
+    get:
+      tags:
+        - Access/Exit Points
+      summary: Get all access/exit points
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of access/exit points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccessExitPoint'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - Access/Exit Points
+      summary: Create a new access/exit point
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Access/exit point created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessExitPoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /access-exit-points/{id}:
+    get:
+      tags:
+        - Access/Exit Points
+      summary: Get a single access/exit point
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: An access/exit point
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessExitPoint'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Access/Exit Points
+      summary: Update an access/exit point
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Access/exit point updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessExitPoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Access/Exit Points
+      summary: Delete an access/exit point
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Access/exit point deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /users/vehicles:
+    post:
+      tags:
+        - Vehicles
+      summary: Register a new vehicle for the current user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterVehicleInput'
+      responses:
+        '201':
+          description: Vehicle registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/vehicles/log-entry-exit:
+    post:
+      tags:
+        - Vehicles
+      summary: Log an entry or exit for a registered vehicle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogVehicleActivityInput'
+      responses:
+        '201':
+          description: Vehicle activity logged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleActivity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/vehicles/my-activities:
+    get:
+      tags:
+        - Vehicles
+      summary: Get the current user's vehicle activities
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of the user's vehicle activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleActivity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /users/vehicles/status/{plateNumber}:
+    get:
+      tags:
+        - Vehicles
+      summary: Get the status of a vehicle by plate number
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: plateNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The vehicle status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleActivity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /security/vehicles/log-vehicle:
+    post:
+      tags:
+        - Security
+      summary: Log an entry or exit for a guest vehicle
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogVehicleActivityInput'
+      responses:
+        '201':
+          description: Guest vehicle activity logged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleActivity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden
+  /security/vehicles/activities:
+    get:
+      tags:
+        - Security
+      summary: Get all vehicle activities
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of all vehicle activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleActivity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden
+  /security/vehicles/status/{plateNumber}:
+    get:
+      tags:
+        - Security
+      summary: Get the status of a vehicle by plate number (Security)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: plateNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The vehicle status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleActivity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /security/reports/activity:
+    get:
+      tags:
+        - Security
+      summary: Get a report of all vehicle activity
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A report of all vehicle activity
+          content:
+            application/json:
+              schema:
+                type: object # Define a proper schema for the report
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, user, security]
+        createdAt:
+          type: string
+          format: date-time
+    RegisterInput:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - role
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        role:
+          type: string
+          enum: [admin, user, security]
+    LoginInput:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    Profile:
+      type: object
+      properties:
+        profile_id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+        full_name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        display_name:
+          type: string
+    UpdateUserProfileInput:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        full_name:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+        avatar_url:
+          type: string
+          format: uri
+        display_name:
+          type: string
+    AccessExitPoint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        plate_number:
+          type: string
+        type:
+          type: string
+          enum: [bus, car, bike]
+        model:
+          type: string
+        color:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    RegisterVehicleInput:
+      type: object
+      required:
+        - plate_number
+        - model
+        - color
+        - type
+      properties:
+        plate_number:
+          type: string
+        model:
+          type: string
+        color:
+          type: string
+        type:
+          type: string
+          enum: [bus, car, bike]
+    LogVehicleActivityInput:
+      type: object
+      required:
+        - plate_number
+        - visitor_type
+        - is_entry
+      properties:
+        plate_number:
+          type: string
+        visitor_type:
+          type: string
+          enum: [registered, guest]
+        is_entry:
+          type: boolean
+        entry_point_id:
+          type: string
+          format: uuid
+        exit_point_id:
+          type: string
+          format: uuid
+    VehicleActivity:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        plate_number:
+          type: string
+        visitor_type:
+          type: string
+          enum: [registered, guest]
+        vehicle_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        is_entry:
+          type: boolean
+        vehicle_type:
+          type: string
+          enum: [bus, car, bike]
+        entry_point_id:
+          type: string
+          format: uuid
+        exit_point_id:
+          type: string
+          format: uuid
+        registered_by:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+  responses:
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
