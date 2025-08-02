@@ -31,3 +31,7 @@ type Profile struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 	DisplayName string         `gorm:"type:varchar(255)" json:"display_name"`
 }
+
+func (p *Profile) GetUserProfile(db *gorm.DB, user_id string) error {
+	return db.Where("user_id = ?", user_id).First(&p).Error
+}

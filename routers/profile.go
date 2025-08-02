@@ -1,19 +1,22 @@
 package routers
 
 import (
+	"survielx-backend/controllers"
+	"survielx-backend/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
 func UserProfileRoutes(r *gin.Engine) {
-	// profile := r.Group("/profile")
-	// profile.Use(middleware.AuthMiddleware())
-	// {
-	// 	// Current user profile operations
-	// 	profile.PUT("/", controllers.UpdateUserProfile)
-	// 	profile.GET("/", controllers.GetUserProfile)
-	// }
+	profile := r.Group("/profile")
+	profile.Use(middleware.AuthMiddleware())
+	{
+		// Current user profile operations
+		profile.PUT("/", controllers.UpdateUserProfile)
+		profile.GET("/", controllers.GetUserProfile)
+	}
 
-	// // Admin routes for user management
+	// Admin routes for user management
 	// adminUsers := r.Group("/admin/users")
 	// adminUsers.Use(middleware.AuthMiddleware())
 	// {
