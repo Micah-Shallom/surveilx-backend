@@ -30,14 +30,12 @@ func VehicleActivityRoutes(r *gin.Engine) {
 	{
 
 		// Guest vehicle management
-		security_admin.POST("/vehicles/log-guest", controllers.LogVehicleActivity)
-		security_admin.POST("/vehicles/log-registered", controllers.LogVehicleActivity)
+		security_admin.POST("/vehicles/log-vehicle", controllers.LogVehicleActivity)
 
 		// Monitoring and reports
 		security_admin.GET("/vehicles/activities", controllers.GetVehicleActivities)
 		security_admin.GET("/vehicles/status/:plateNumber", controllers.GetVehicleStatus)
 		security_admin.GET("/reports/activity", controllers.GetActivityReport)
-		security_admin.GET("/reports/daily-summary", controllers.GetActivityReport) // Could be a separate endpoint
 	}
 
 	// Admin routes (if needed)
