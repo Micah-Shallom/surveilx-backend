@@ -1,18 +1,19 @@
 package routers
 
 import (
+	"fmt"
 	"survielx-backend/controllers"
 	"survielx-backend/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func VehicleActivityRoutes(r *gin.Engine) {
+func VehicleActivityRoutes(r *gin.Engine, api_version string) {
 	// Public routes
-	r.POST("/verify-vehicle", controllers.VerifyVehicle)
+	// r.POST(fmt.Sprintf("%v/
 
 	// Regular user routes
-	user := r.Group("/user")
+	user := r.Group(fmt.Sprintf("%v/users", api_version))
 	user.Use(middleware.AuthMiddleware())
 	{
 		// Vehicle management
@@ -25,7 +26,7 @@ func VehicleActivityRoutes(r *gin.Engine) {
 	}
 
 	// Security personnel routes
-	security_admin := r.Group("/security")
+	security_admin := r.Group(fmt.Sprintf("%v/security", api_version))
 	security_admin.Use(middleware.AuthMiddleware(), middleware.SecurityMiddleware())
 	{
 

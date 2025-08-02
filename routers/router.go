@@ -13,10 +13,13 @@ func SetupRouter() *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.CORSMiddleware())
 
-	AuthRoutes(r)
-	UsersRoutes(r)
-	VehicleActivityRoutes(r)
-	AccessExitPointRoutes(r)
+	ApiVersion := "api/v1"
+
+	AuthRoutes(r, ApiVersion)
+	UsersRoutes(r, ApiVersion)
+	VehicleActivityRoutes(r, ApiVersion)
+	AccessExitPointRoutes(r, ApiVersion)
+	UserProfileRoutes(r, ApiVersion)
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
