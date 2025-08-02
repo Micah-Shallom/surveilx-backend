@@ -9,12 +9,12 @@ import (
 
 func AccessExitPointRoutes(r *gin.Engine) {
 	access := r.Group("/access-points")
-	access.Use(middleware.AuthMiddleware(), middleware.SecurityMiddleware())
+	access.Use(middleware.AuthMiddleware())
 	{
-		access.POST("/", controllers.CreateAccessExitPoint)
+		access.POST("/", controllers.CreateAccessExitPoint, middleware.SecurityMiddleware())
 		access.GET("/", controllers.GetAccessExitPoints)
 		access.GET("/:id", controllers.GetAccessExitPoint)
-		access.DELETE("/:id", controllers.DeleteAccessExitPoint)
+		access.DELETE("/:id", controllers.DeleteAccessExitPoint, middleware.SecurityMiddleware())
 		access.PUT("/:id", middleware.SecurityMiddleware(), controllers.UpdateAccessExitPoint)
 	}
 }

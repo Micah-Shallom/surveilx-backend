@@ -46,15 +46,37 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 		PlateNumber: req.PlateNumber,
 		VisitorType: req.VisitorType,
 		IsEntry:     req.IsEntry,
-		VehicleType: req.VehicleType,
 		Timestamp:   time.Now(),
+		UserID:      &loggedByUserID,
+	}
+
+	if (req.EntryPointID != "" && req.ExitPointID != "") || (req.EntryPointID == "" && req.ExitPointID == "") {
+		return nil, http.StatusBadRequest, fmt.Errorf("either both entry and exit points must be provided or neither")
+	}
+
+	if req.IsEntry {
+		if req.EntryPointID == "" {
+			return nil, http.StatusBadRequest, fmt.Errorf("entry point ID is required for entry activity")
+		}
+	} else {
+		if req.ExitPointID == "" {
+			return nil, http.StatusBadRequest, fmt.Errorf("exit point ID is required for exit activity")
+		}
 	}
 
 	// Handle entry/exit points
 	if req.EntryPointID != "" {
+		exist := models.CheckExists(db, &models.AccessExitPoint{}, "id = ?", req.EntryPointID)
+		if !exist {
+			return nil, http.StatusNotFound, fmt.Errorf("entry point with ID %s not found", req.EntryPointID)
+		}
 		activity.EntryPointID = &req.EntryPointID
 	}
 	if req.ExitPointID != "" {
+		exist := models.CheckExists(db, &models.AccessExitPoint{}, "id = ?", req.ExitPointID)
+		if !exist {
+			return nil, http.StatusNotFound, fmt.Errorf("exit point with ID %s not found", req.ExitPointID)
+		}
 		activity.ExitPointID = &req.ExitPointID
 	}
 
@@ -69,6 +91,7 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 
 		activity.VehicleID = &vehicle.ID
 		activity.UserID = &vehicle.UserID
+		activity.VehicleType = vehicle.Type
 
 		// Validate entry/exit logic for registered vehicles
 		if err := validateVehicleEntryExit(db, vehicle.ID, req.IsEntry); err != nil {
@@ -97,11 +120,10 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 func getVehicleActivityResponse(db *gorm.DB, activityID string) (*models.VehicleActivityResponse, int, error) {
 	var activity models.VehicleActivity
 
-	err := db.Preload("Vehicle").
+	err := db.
 		Preload("User").
 		Preload("EntryPoint").
 		Preload("ExitPoint").
-		Preload("RegisteredByUser").
 		First(&activity, "id = ?", activityID).Error
 
 	if err != nil {
@@ -247,7 +269,7 @@ func GetUserVehicles(db *gorm.DB, userID string) ([]models.Vehicle, error) {
 func GetVehicleActivities(db *gorm.DB, plateNumber string, limit int, visitorType *models.VisitorType) ([]models.VehicleActivityResponse, error) {
 	var activities []models.VehicleActivity
 
-	query := db.Preload("Vehicle").
+	query := db.
 		Preload("User").
 		Preload("EntryPoint").
 		Preload("ExitPoint").

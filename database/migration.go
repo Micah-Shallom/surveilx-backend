@@ -11,6 +11,7 @@ func MigrateDatabase() {
 		&models.Vehicle{},
 		&models.AccessExitPoint{},
 		&models.Profile{},
+		&models.VehicleActivity{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
