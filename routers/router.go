@@ -20,6 +20,7 @@ func SetupRouter() *gin.Engine {
 	VehicleActivityRoutes(r, ApiVersion)
 	AccessExitPointRoutes(r, ApiVersion)
 	UserProfileRoutes(r, ApiVersion)
+	HealthRoutes(r, ApiVersion)
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
