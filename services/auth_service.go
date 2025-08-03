@@ -16,8 +16,9 @@ import (
 
 func Register(user *models.User) (*models.User, int, error) {
 	var existingUser models.User
-	if err := database.DB.Where("email = ?", user.Email).First(&existingUser).Error; err == nil {
-		return loginAndGenerateToken(&existingUser, user.Password)
+	exist := models.CheckExists(database.DB, &existingUser, "email = ?", user.Email)
+	if exist {
+		return nil, http.StatusConflict, errors.New("user with this email already exists")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
@@ -30,7 +31,7 @@ func Register(user *models.User) (*models.User, int, error) {
 		return nil, http.StatusInternalServerError, fmt.Errorf("failed to create user: %v", err)
 	}
 
-	return loginAndGenerateToken(user, user.Password)
+	return user, http.StatusCreated, nil
 }
 
 func Login(email string, password string) (*models.User, int, error) {
