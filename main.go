@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"survielx-backend/database"
 	"survielx-backend/routers"
 
@@ -19,5 +21,5 @@ func main() {
 
 	r := routers.SetupRouter()
 
-	r.Run()
+	r.Run(fmt.Sprintf(":%s", os.Getenv("PORT"))) // Use PORT from .env file
 }
