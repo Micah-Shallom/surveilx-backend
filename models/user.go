@@ -22,3 +22,10 @@ func (user *User) BeforeCreate(tx *gorm.DB) (err error) {
 	user.ID = utility.GenerateUUID()
 	return
 }
+
+func (user *User) CreateUser(db *gorm.DB) error {
+	if err := db.Create(user).Error; err != nil {
+		return err
+	}
+	return nil
+}

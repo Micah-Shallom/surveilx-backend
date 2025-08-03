@@ -14,8 +14,24 @@ import (
 	"gorm.io/gorm"
 )
 
-func Register(user *models.User) (*models.User, int, error) {
-	var existingUser models.User
+func Register(db *gorm.DB, user *models.User) (*models.User, int, error) {
+	var (
+		existingUser models.User
+		profile      models.Profile
+	)
+
+	originalPassword := user.Password
+
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+	if err := tx.Error; err != nil {
+		return nil, http.StatusInternalServerError, errors.New("failed to start transaction")
+	}
+
 	exist := models.CheckExists(database.DB, &existingUser, "email = ?", user.Email)
 	if exist {
 		return nil, http.StatusConflict, errors.New("user with this email already exists")
@@ -27,11 +43,30 @@ func Register(user *models.User) (*models.User, int, error) {
 	}
 	user.Password = string(hashedPassword)
 
-	if err := database.DB.Create(user).Error; err != nil {
+	err = user.CreateUser(tx)
+	if err != nil {
+		tx.Rollback()
 		return nil, http.StatusInternalServerError, fmt.Errorf("failed to create user: %v", err)
 	}
 
-	return user, http.StatusCreated, nil
+	profile.UserID = user.ID
+	err = profile.CreateProfile(tx)
+	if err != nil {
+		tx.Rollback()
+		return nil, http.StatusInternalServerError, fmt.Errorf("failed to create user profile: %v", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return nil, http.StatusInternalServerError, errors.New("failed to commit transaction")
+	}
+
+	luser, code, err := loginAndGenerateToken(user, originalPassword)
+	if err != nil {
+		return nil, code, fmt.Errorf("failed to login and generate token: %v", err)
+	}
+
+
+	return luser, http.StatusCreated, nil
 }
 
 func Login(email string, password string) (*models.User, int, error) {

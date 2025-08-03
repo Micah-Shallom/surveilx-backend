@@ -10,7 +10,6 @@ import (
 
 func VehicleActivityRoutes(r *gin.Engine, api_version string) {
 	// Public routes
-	// r.POST(fmt.Sprintf("%v/
 
 	// Regular user routes
 	user := r.Group(fmt.Sprintf("%v/users", api_version))

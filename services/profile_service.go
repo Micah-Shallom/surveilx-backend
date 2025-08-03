@@ -19,13 +19,16 @@ func UpdateUserProfile(db *gorm.DB, userID string, req *models.UpdateUserProfile
 		return http.StatusNotFound, errors.New("user not found")
 	}
 
+	exists = models.CheckExists(db, &profile, "user_id = ?", userID)
+	if !exists {
+		return http.StatusNotFound, errors.New("profile not found")
+	}
+
 	profileUpdates := models.Profile{
-		FirstName:   req.FirstName,
-		LastName:    req.LastName,
 		FullName:    req.FullName,
 		UserName:    req.UserName,
-		AvatarURL:   req.AvatarURL,
 		Phone:       req.Phone,
+		AvatarURL:   req.AvatarURL,
 		DisplayName: req.DisplayName,
 	}
 
@@ -35,7 +38,7 @@ func UpdateUserProfile(db *gorm.DB, userID string, req *models.UpdateUserProfile
 	}
 
 	if result.RowsAffected == 0 {
-		return http.StatusBadRequest, errors.New("failed to update user profile")
+		return http.StatusBadRequest, errors.New("no fields updated")
 	}
 
 	return http.StatusOK, nil

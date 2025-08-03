@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"survielx-backend/database"
 	"survielx-backend/models"
 	"survielx-backend/services"
 	"survielx-backend/utility"
@@ -37,7 +38,7 @@ func Register(c *gin.Context) {
 		Role:     role,
 	}
 
-	createdUser, code, err := services.Register(&user)
+	createdUser, code, err := services.Register(database.DB, &user)
 	if err != nil {
 		rd := utility.BuildErrorResponse(code, "error", "Failed to register user", err.Error(), nil)
 		c.JSON(code, rd)
