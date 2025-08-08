@@ -245,6 +245,7 @@ func validateVehicleEntryExit(db *gorm.DB, vehicleID string, isEntry bool) error
 
 	if isEntry {
 		if lastLog.IsEntry {
+			//send notification to security personnel
 			return fmt.Errorf("vehicle is already inside - cannot enter again without exiting first")
 		}
 	} else {

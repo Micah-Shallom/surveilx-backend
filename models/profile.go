@@ -9,27 +9,20 @@ import (
 
 // UpdateUserProfileInput represents the input for updating user profile
 type UpdateUserProfileInput struct {
-	Email             string `json:"email"`
-	Phone             string `json:"phone"`
-	FullName          string `json:"full_name"`
-	UserName          string `json:"username"`
-	AvatarURL         string `json:"avatar_url"`
-	AvatarFile        string `json:"avatar_file"`
-	DisplayName       string `json:"display_name"`
-	AvatarUpdate      bool
+	Phone    string `json:"phone"`
+	UserName string `json:"username"`
+	FullName string `json:"full_name"`
 }
 
 type Profile struct {
-	ID          string         `gorm:"type:uuid;primary_key" json:"profile_id"`
-	FullName    string         `gorm:"column:full_name; type:text;" json:"full_name"`
-	UserName    string         `gorm:"column:user_name; type:text;" json:"username"`
-	Phone       string         `gorm:"type:varchar(255)" json:"phone"`
-	AvatarURL   string         `gorm:"type:varchar(255)" json:"avatar_url"`
-	UserID      string         `gorm:"type:uuid;" json:"user_id"`
-	CreatedAt   time.Time      `gorm:"column:created_at; not null; autoCreateTime" json:"created_at"`
-	UpdatedAt   time.Time      `gorm:"column:updated_at; null; autoUpdateTime" json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
-	DisplayName string         `gorm:"type:varchar(255)" json:"display_name"`
+	ID        string         `gorm:"type:uuid;primary_key" json:"profile_id"`
+	FullName  string         `gorm:"column:full_name; type:text;" json:"full_name"`
+	UserName  string         `gorm:"column:user_name; type:text;" json:"username"`
+	Phone     string         `gorm:"type:varchar(255)" json:"phone"`
+	UserID    string         `gorm:"type:uuid;" json:"user_id"`
+	CreatedAt time.Time      `gorm:"column:created_at; not null; autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time      `gorm:"column:updated_at; null; autoUpdateTime" json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (p *Profile) GetUserProfile(db *gorm.DB, user_id string) error {

@@ -57,7 +57,7 @@ type VehicleActivity struct {
 	RegisteredByUser *User   `json:"registered_by_user,omitempty" gorm:"foreignKey:RegisteredBy"`
 
 	// Timestamps
-	Timestamp time.Time      `json:"timestamp" gorm:"not null;index"`
+	Timestamp time.Time      `json:"timestamp" gorm:"not null;default:CURRENT_TIMESTAMP"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

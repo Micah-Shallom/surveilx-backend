@@ -28,8 +28,6 @@ func UpdateUserProfile(db *gorm.DB, userID string, req *models.UpdateUserProfile
 		FullName:    req.FullName,
 		UserName:    req.UserName,
 		Phone:       req.Phone,
-		AvatarURL:   req.AvatarURL,
-		DisplayName: req.DisplayName,
 	}
 
 	result, err := models.UpdateFields(db, &profile, profileUpdates, "user_id = ?", userID)

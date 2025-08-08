@@ -17,7 +17,7 @@ func VehicleActivityRoutes(r *gin.Engine, api_version string) {
 	{
 		// Vehicle management
 		user.POST("/vehicles", controllers.RegisterVehicle)
-		user.POST("/vehicles/log-entry-exit", controllers.LogVehicleActivity) // For registered vehicles only
+		user.POST("/vehicles/log-entry-exit", controllers.LogVehicleActivity)
 
 		// User's vehicle activities
 		user.GET("/vehicles/my-activities", controllers.GetUserVehicleActivities)

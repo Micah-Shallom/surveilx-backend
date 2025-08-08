@@ -471,19 +471,12 @@ components:
         profile_id:
           type: string
           format: uuid
-        first_name:
-          type: string
-        last_name:
-          type: string
         full_name:
           type: string
         username:
           type: string
         phone:
           type: string
-        avatar_url:
-          type: string
-          format: uri
         user_id:
           type: string
           format: uuid
@@ -493,25 +486,14 @@ components:
         updated_at:
           type: string
           format: date-time
-        display_name:
-          type: string
     UpdateUserProfileInput:
       type: object
       properties:
-        first_name:
-          type: string
-        last_name:
-          type: string
         full_name:
           type: string
         username:
           type: string
         phone:
-          type: string
-        avatar_url:
-          type: string
-          format: uri
-        display_name:
           type: string
     AccessExitPoint:
       type: object

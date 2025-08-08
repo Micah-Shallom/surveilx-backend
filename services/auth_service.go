@@ -65,7 +65,6 @@ func Register(db *gorm.DB, user *models.User) (*models.User, int, error) {
 		return nil, code, fmt.Errorf("failed to login and generate token: %v", err)
 	}
 
-
 	return luser, http.StatusCreated, nil
 }
 
