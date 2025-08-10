@@ -17,11 +17,10 @@ func VehicleActivityRoutes(r *gin.Engine, api_version string) {
 	{
 		// Vehicle management
 		user.POST("/vehicles", controllers.RegisterVehicle)
+		user.GET("/vehicles", controllers.GetUserVehicles)
 		user.POST("/vehicles/log-entry-exit", controllers.LogVehicleActivity)
-
-		// User's vehicle activities
-		user.GET("/vehicles/my-activities", controllers.GetUserVehicleActivities)
-		user.GET("/vehicles/status/:plateNumber", controllers.GetVehicleStatus)
+		user.GET("/vehicles/:vehicle_id/activities", controllers.GetUserVehicleActivities)
+		user.GET("/vehicles/status/:plateNumber", controllers.GetVehicleStatus) 
 	}
 
 	// Security personnel routes
@@ -33,7 +32,6 @@ func VehicleActivityRoutes(r *gin.Engine, api_version string) {
 		security_admin.POST("/vehicles/log-vehicle", controllers.LogVehicleActivity)
 
 		// Monitoring and reports
-		security_admin.GET("/vehicles/activities", controllers.GetVehicleActivities)
 		security_admin.GET("/vehicles/status/:plateNumber", controllers.GetVehicleStatus)
 		security_admin.GET("/reports/activity", controllers.GetActivityReport)
 	}

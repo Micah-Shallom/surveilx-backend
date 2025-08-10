@@ -19,3 +19,4 @@ func AccessExitPointRoutes(r *gin.Engine, api_version string) {
 		access.PUT("/:id", middleware.SecurityMiddleware(), controllers.UpdateAccessExitPoint)
 	}
 }
+																

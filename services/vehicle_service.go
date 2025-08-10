@@ -257,50 +257,52 @@ func validateVehicleEntryExit(db *gorm.DB, vehicleID string, isEntry bool) error
 	return nil
 }
 
-func GetUserVehicles(db *gorm.DB, userID string) ([]models.Vehicle, error) {
+func GetUserVehicles(db *gorm.DB, userID string) ([]models.Vehicle, int, error) {
 	var vehicles []models.Vehicle
 
 	if err := db.Where("user_id = ?", userID).Find(&vehicles).Error; err != nil {
-		return nil, fmt.Errorf("failed to get user vehicles: %v", err)
+		return nil, http.StatusInternalServerError, fmt.Errorf("failed to get user vehicles: %v", err)
 	}
 
-	return vehicles, nil
+	return vehicles, http.StatusOK, nil
 }
 
-func GetVehicleActivities(db *gorm.DB, plateNumber string, limit int, visitorType *models.VisitorType) ([]models.VehicleActivityResponse, error) {
-	var activities []models.VehicleActivity
+func GetVehicleActivities(db *gorm.DB, vehicle_id string) ([]models.VehicleActivityResponse, int, error) {
+	var responses []models.VehicleActivityResponse
+
+	exists := models.CheckExists(db, &models.Vehicle{}, "id = ?", vehicle_id)
+	if !exists {
+		return nil, http.StatusNotFound, fmt.Errorf("vehicle with ID %s not found", vehicle_id)
+	}
 
 	query := db.
-		Preload("User").
-		Preload("EntryPoint").
-		Preload("ExitPoint").
-		Preload("RegisteredByUser")
+		Model(&models.VehicleActivity{}).
+		Select(`
+            vehicle_activities.id,
+            vehicle_activities.plate_number,
+            vehicle_activities.visitor_type,
+            vehicle_activities.is_entry,
+            vehicle_activities.vehicle_type,
+            vehicle_activities.timestamp,
+            vehicles.*,
+            users.*,
+            entry_points.*,
+            exit_points.*,
+            registered_by_users.*
+        `).
+		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
+		Joins("LEFT JOIN users ON vehicle_activities.user_id = users.id").
+		Joins("LEFT JOIN access_exit_points AS entry_points ON vehicle_activities.entry_point_id = entry_points.id").
+		Joins("LEFT JOIN access_exit_points AS exit_points ON vehicle_activities.exit_point_id = exit_points.id").
+		Joins("LEFT JOIN users AS registered_by_users ON vehicle_activities.registered_by = registered_by_users.id").
+		Where("vehicle_activities.vehicle_id = ?", vehicle_id).
+		Order("vehicle_activities.timestamp desc")
 
-	if plateNumber != "" {
-		query = query.Where("plate_number = ?", plateNumber)
+	if err := query.Scan(&responses).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to get vehicle activities: %v", err)
 	}
 
-	if visitorType != nil {
-		query = query.Where("visitor_type = ?", *visitorType)
-	}
-
-	query = query.Order("timestamp desc")
-
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-
-	if err := query.Find(&activities).Error; err != nil {
-		return nil, fmt.Errorf("failed to get vehicle activities: %v", err)
-	}
-
-	// Convert to response format
-	responses := make([]models.VehicleActivityResponse, len(activities))
-	for i, activity := range activities {
-		responses[i] = convertToActivityResponse(activity)
-	}
-
-	return responses, nil
+	return responses, http.StatusOK, nil
 }
 
 func convertToActivityResponse(activity models.VehicleActivity) models.VehicleActivityResponse {

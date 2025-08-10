@@ -50,6 +50,22 @@ func RegisterVehicle(c *gin.Context) {
 	c.JSON(code, rd)
 }
 
+func GetUserVehicles(c *gin.Context) {
+	userID := c.MustGet("user_id").(string)
+
+	vehicles, code, err := services.GetUserVehicles(database.DB, userID)
+	if err != nil {
+		log.Default().Println("Error fetching user vehicles:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to fetch user vehicles", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	log.Default().Println("User vehicles retrieved successfully for user ID:", userID)
+	rd := utility.BuildSuccessResponse(code, "User vehicles retrieved successfully", vehicles)
+	c.JSON(code, rd)
+}
+
 func LogVehicleActivity(c *gin.Context) {
 	var input models.LogVehicleActivityInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -91,7 +107,7 @@ func GetVehicleLogs(c *gin.Context) {
 	userID := c.MustGet("user_id").(string)
 	logs, code, err := services.GetVehicleLogs(userID)
 	if err != nil {
-		log.Default().Println("Error fetching vehicle logs:", err)	
+		log.Default().Println("Error fetching vehicle logs:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle logs", err.Error(), nil)
 		c.JSON(code, rd)
 		return
@@ -104,43 +120,25 @@ func GetVehicleLogs(c *gin.Context) {
 
 // GetUserVehicleActivities returns activities for vehicles owned by the authenticated user
 func GetUserVehicleActivities(c *gin.Context) {
-	userID := c.MustGet("user_id").(string)
-	limitStr := c.DefaultQuery("limit", "50")
+	vehicle_id := c.Param("vehicle_id")
 
-	limit, err := strconv.Atoi(limitStr)
+	err := utility.ValidateUUID(vehicle_id)
 	if err != nil {
-		limit = 50
-	}
-
-	// Get user's registered vehicles first
-	userVehicles, err := services.GetUserVehicles(database.DB, userID)
-	if err != nil {
-		log.Default().Println("Error fetching user vehicles:", err)
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get user vehicles", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
+		log.Default().Println("Invalid vehicle ID:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid vehicle ID", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
-	var allActivities []models.VehicleActivityResponse
-	registeredType := models.VisitorTypeRegistered
-
-	// Get activities for each user vehicle
-	for _, vehicle := range userVehicles {
-		activities, err := services.GetVehicleActivities(database.DB, vehicle.PlateNumber, limit, &registeredType)
-		if err != nil {
-			continue // Skip this vehicle if there's an error
-		}
-		allActivities = append(allActivities, activities...)
+	data, code, err := services.GetVehicleActivities(database.DB, vehicle_id)
+	if err != nil {
+		log.Default().Println("Error fetching vehicle activities:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle activities", err.Error(), nil)
+		c.JSON(code, rd)
+		return
 	}
 
-	data := map[string]any{
-		"activities":    allActivities,
-		"total_count":   len(allActivities),
-		"user_vehicles": len(userVehicles),
-		"limit":         limit,
-	}
-
-	log.Default().Println("User vehicle activities retrieved successfully for user ID:", userID)
+	log.Default().Println("User vehicle activities retrieved successfully")
 	rd := utility.BuildSuccessResponse(http.StatusOK, "User vehicle activities retrieved successfully", data)
 	c.JSON(http.StatusOK, rd)
 }
@@ -200,46 +198,6 @@ func GetVehicleLogHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, rd)
 }
 
-func GetVehicleActivities(c *gin.Context) {
-	plateNumber := c.Query("plate_number")
-	limitStr := c.DefaultQuery("limit", "50")
-	visitorTypeStr := c.Query("visitor_type") // optional: "registered" or "guest"
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		limit = 50
-	}
-
-	var visitorType *models.VisitorType
-	if visitorTypeStr != "" {
-		vt := models.VisitorType(visitorTypeStr)
-		if vt == models.VisitorTypeRegistered || vt == models.VisitorTypeGuest {
-			visitorType = &vt
-		} else {
-			rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid visitor type", "visitor_type must be 'registered' or 'guest'", nil)
-			c.JSON(http.StatusBadRequest, rd)
-			return
-		}
-	}
-
-	activities, err := services.GetVehicleActivities(database.DB, plateNumber, limit, visitorType)
-	if err != nil {
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get vehicle activities", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
-		return
-	}
-
-	data := map[string]any{
-		"activities":   activities,
-		"total_count":  len(activities),
-		"plate_number": plateNumber,
-		"visitor_type": visitorTypeStr,
-		"limit":        limit,
-	}
-
-	rd := utility.BuildSuccessResponse(http.StatusOK, "Vehicle activities retrieved successfully", data)
-	c.JSON(http.StatusOK, rd)
-}
 
 // GetActivityReport returns activity report for a date range
 func GetActivityReport(c *gin.Context) {
