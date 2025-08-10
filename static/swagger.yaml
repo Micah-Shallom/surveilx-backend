@@ -52,6 +52,25 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Check the health of the API
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  message:
+                    type: string
+                    example: SurvielX Backend API is running smoothly.
   /users:
     get:
       tags:
@@ -133,6 +152,7 @@ paths:
       tags:
         - Access/Exit Points
       summary: Create a new access/exit point
+      description: Requires admin or security role.
       security:
         - bearerAuth: []
       requestBody:
@@ -155,6 +175,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /access-exit-points/{id}:
     get:
       tags:
@@ -184,6 +206,7 @@ paths:
       tags:
         - Access/Exit Points
       summary: Update an access/exit point
+      description: Requires admin or security role.
       security:
         - bearerAuth: []
       parameters:
@@ -213,12 +236,15 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     delete:
       tags:
         - Access/Exit Points
       summary: Delete an access/exit point
+      description: Requires admin or security role.
       security:
         - bearerAuth: []
       parameters:
@@ -233,9 +259,11 @@ paths:
           description: Access/exit point deleted successfully
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /users/vehicles:
+  /vehicles/register:
     post:
       tags:
         - Vehicles
@@ -259,11 +287,82 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /users/vehicles/log-entry-exit:
-    post:
+  /vehicles/fetch_vehicles:
+    get:
       tags:
         - Vehicles
-      summary: Log an entry or exit for a registered vehicle
+      summary: Get all vehicles for the current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /vehicles/{vehicle_id}/activities:
+    get:
+      tags:
+        - Vehicles
+      summary: Get all activities for a specific vehicle
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of vehicle activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleActivity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /vehicles/guest/activities/{plateNumber}:
+    get:
+      tags:
+        - Vehicles
+      summary: Get all activities for a guest vehicle by plate number
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: plateNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of vehicle activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VehicleActivity'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /vehicles/log-vehicle:
+    post:
+      tags:
+        - Security
+      summary: Log an entry or exit for a vehicle by security personnel
       security:
         - bearerAuth: []
       requestBody:
@@ -283,31 +382,11 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-  /users/vehicles/my-activities:
+  /vehicles/identify/{plateNumber}:
     get:
       tags:
         - Vehicles
-      summary: Get the current user's vehicle activities
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: A list of the user's vehicle activities
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/VehicleActivity'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-  /users/vehicles/status/{plateNumber}:
-    get:
-      tags:
-        - Vehicles
-      summary: Get the status of a vehicle by plate number
-      security:
-        - bearerAuth: []
+      summary: Identify a vehicle by plate number
       parameters:
         - name: plateNumber
           in: path
@@ -316,22 +395,18 @@ paths:
             type: string
       responses:
         '200':
-          description: The vehicle status
+          description: The vehicle identity
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/VehicleActivity'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+                $ref: '#/components/schemas/Vehicle'
         '404':
           $ref: '#/components/responses/NotFound'
-  /security/vehicles/log-vehicle:
+  /vehicles/sys-log-vehicle:
     post:
       tags:
-        - Security
-      summary: Log an entry or exit for a guest vehicle
-      security:
-        - bearerAuth: []
+        - Vehicles
+      summary: System log an entry or exit for a vehicle
       requestBody:
         required: true
         content:
@@ -340,81 +415,13 @@ paths:
               $ref: '#/components/schemas/LogVehicleActivityInput'
       responses:
         '201':
-          description: Guest vehicle activity logged successfully
+          description: Vehicle activity logged successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/VehicleActivity'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Forbidden
-  /security/vehicles/activities:
-    get:
-      tags:
-        - Security
-      summary: Get all vehicle activities
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: A list of all vehicle activities
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/VehicleActivity'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Forbidden
-  /security/vehicles/status/{plateNumber}:
-    get:
-      tags:
-        - Security
-      summary: Get the status of a vehicle by plate number (Security)
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: plateNumber
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: The vehicle status
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/VehicleActivity'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Forbidden
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /security/reports/activity:
-    get:
-      tags:
-        - Security
-      summary: Get a report of all vehicle activity
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: A report of all vehicle activity
-          content:
-            application/json:
-              schema:
-                type: object # Define a proper schema for the report
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          description: Forbidden
 components:
   schemas:
     User:
@@ -626,6 +633,12 @@ components:
             $ref: '#/components/schemas/Error'
     NotFound:
       description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Forbidden
       content:
         application/json:
           schema:
