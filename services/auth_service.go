@@ -29,7 +29,7 @@ func Register(db *gorm.DB, user *models.User) (*models.User, int, error) {
 		}
 	}()
 	if err := tx.Error; err != nil {
-		return nil, http.StatusInternalServerError, errors.New("failed to start transaction")
+		return nil, http.StatusBadRequest, errors.New("failed to start transaction")
 	}
 
 	exist := models.CheckExists(database.DB, &existingUser, "email = ?", user.Email)
@@ -39,14 +39,14 @@ func Register(db *gorm.DB, user *models.User) (*models.User, int, error) {
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, http.StatusInternalServerError, errors.New("failed to hash password")
+		return nil, http.StatusBadRequest, errors.New("failed to hash password")
 	}
 	user.Password = string(hashedPassword)
 
 	err = user.CreateUser(tx)
 	if err != nil {
 		tx.Rollback()
-		return nil, http.StatusInternalServerError, fmt.Errorf("failed to create user: %v", err)
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to create user: %v", err)
 	}
 
 	profile.UserID = user.ID
@@ -54,11 +54,11 @@ func Register(db *gorm.DB, user *models.User) (*models.User, int, error) {
 	err = profile.CreateProfile(tx)
 	if err != nil {
 		tx.Rollback()
-		return nil, http.StatusInternalServerError, fmt.Errorf("failed to create user profile: %v", err)
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to create user profile: %v", err)
 	}
 
 	if err := tx.Commit().Error; err != nil {
-		return nil, http.StatusInternalServerError, errors.New("failed to commit transaction")
+		return nil, http.StatusBadRequest, errors.New("failed to commit transaction")
 	}
 
 	luser, code, err := loginAndGenerateToken(user, originalPassword)

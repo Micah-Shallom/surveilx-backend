@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"survielx-backend/database"
@@ -31,7 +32,7 @@ func UpdateUserProfile(c *gin.Context) {
 	userID := c.MustGet("user_id").(string)
 	code, err := services.UpdateUserProfile(database.DB, userID, &input)
 	if err != nil {
-		log.Default().Println("Error updating user profile:", err)
+		fmt.Println("Error updating user profile:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to update profile", err.Error(), nil)
 		c.JSON(code, rd)
 		return
