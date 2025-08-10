@@ -50,6 +50,7 @@ func Register(db *gorm.DB, user *models.User) (*models.User, int, error) {
 	}
 
 	profile.UserID = user.ID
+	profile.FullName = user.Name
 	err = profile.CreateProfile(tx)
 	if err != nil {
 		tx.Rollback()
