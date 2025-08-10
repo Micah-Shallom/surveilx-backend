@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 	"survielx-backend/database"
@@ -15,12 +16,14 @@ import (
 func RegisterVehicle(c *gin.Context) {
 	var input models.RegisterVehicleInput
 	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Default().Println("Error binding JSON:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
 	if err := validate.Struct(input); err != nil {
+		log.Default().Println("Validation error:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
@@ -37,6 +40,7 @@ func RegisterVehicle(c *gin.Context) {
 
 	createdVehicle, code, err := services.RegisterVehicle(&vehicle)
 	if err != nil {
+		log.Default().Println("Error registering vehicle:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to register vehicle", err.Error(), nil)
 		c.JSON(code, rd)
 		return
@@ -49,12 +53,14 @@ func RegisterVehicle(c *gin.Context) {
 func LogVehicleActivity(c *gin.Context) {
 	var input models.LogVehicleActivityInput
 	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Default().Println("Error binding JSON:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
 	if err := validate.Struct(input); err != nil {
+		log.Default().Println("Validation error:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
@@ -65,6 +71,7 @@ func LogVehicleActivity(c *gin.Context) {
 
 	activity, code, err := services.LogVehicleActivity(database.DB, input, loggedByUserID)
 	if err != nil {
+		log.Default().Println("Error logging vehicle activity:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to log vehicle activity", err.Error(), nil)
 		c.JSON(code, rd)
 		return
@@ -75,6 +82,7 @@ func LogVehicleActivity(c *gin.Context) {
 		message = "Guest vehicle activity logged successfully"
 	}
 
+	log.Default().Println(message, activity.PlateNumber, "by user ID:", loggedByUserID)
 	rd := utility.BuildSuccessResponse(code, message, activity)
 	c.JSON(code, rd)
 }
@@ -83,10 +91,13 @@ func GetVehicleLogs(c *gin.Context) {
 	userID := c.MustGet("user_id").(string)
 	logs, code, err := services.GetVehicleLogs(userID)
 	if err != nil {
+		log.Default().Println("Error fetching vehicle logs:", err)	
 		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle logs", err.Error(), nil)
 		c.JSON(code, rd)
 		return
 	}
+
+	log.Default().Println("Successfully fetched vehicle logs for user ID:", userID)
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Successfully fetched vehicle logs", logs)
 	c.JSON(http.StatusOK, rd)
 }
@@ -104,6 +115,7 @@ func GetUserVehicleActivities(c *gin.Context) {
 	// Get user's registered vehicles first
 	userVehicles, err := services.GetUserVehicles(database.DB, userID)
 	if err != nil {
+		log.Default().Println("Error fetching user vehicles:", err)
 		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get user vehicles", err.Error(), nil)
 		c.JSON(http.StatusInternalServerError, rd)
 		return
@@ -128,6 +140,7 @@ func GetUserVehicleActivities(c *gin.Context) {
 		"limit":         limit,
 	}
 
+	log.Default().Println("User vehicle activities retrieved successfully for user ID:", userID)
 	rd := utility.BuildSuccessResponse(http.StatusOK, "User vehicle activities retrieved successfully", data)
 	c.JSON(http.StatusOK, rd)
 }
@@ -137,6 +150,7 @@ func GetVehicleStatus(c *gin.Context) {
 
 	status, err := services.GetVehicleStatusByPlateNumber(plateNumber)
 	if err != nil {
+		log.Default().Println("Error getting vehicle status:", err)
 		rd := utility.BuildErrorResponse(http.StatusNotFound, "error", "Failed to get vehicle status", err.Error(), nil)
 		c.JSON(http.StatusNotFound, rd)
 		return
@@ -147,6 +161,7 @@ func GetVehicleStatus(c *gin.Context) {
 		"status":       status,
 	}
 
+	log.Default().Println("Vehicle status retrieved successfully for plate number:", plateNumber)
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Vehicle status retrieved successfully", data)
 	c.JSON(http.StatusOK, rd)
 }

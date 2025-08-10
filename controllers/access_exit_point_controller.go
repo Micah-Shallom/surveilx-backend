@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"survielx-backend/database"
 	"survielx-backend/models"
@@ -13,17 +14,20 @@ import (
 func CreateAccessExitPoint(c *gin.Context) {
 	var point models.AccessExitPoint
 	if err := c.ShouldBindJSON(&point); err != nil {
+		log.Default().Println("Error binding JSON:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
 	if err := services.CreateAccessExitPoint(database.DB, &point); err != nil {
+		log.Default().Println("Error creating access exit point:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to create access exit point", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
+	log.Default().Println("Access exit point created successfully:", point.Name)
 	rd := utility.BuildSuccessResponse(http.StatusCreated, "Access exit point created successfully", point)
 	c.JSON(http.StatusCreated, rd)
 }

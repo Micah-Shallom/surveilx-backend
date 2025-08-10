@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"survielx-backend/database"
+	"survielx-backend/models/seed"
 	"survielx-backend/routers"
 
 	"github.com/joho/godotenv"
@@ -18,6 +19,7 @@ func main() {
 
 	database.ConnectDatabase()
 	database.MigrateDatabase()
+	seed.SeedAccessPoint(database.DB)
 
 	r := routers.SetupRouter()
 

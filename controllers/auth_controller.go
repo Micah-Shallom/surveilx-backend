@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 	"survielx-backend/database"
 	"survielx-backend/models"
@@ -16,12 +17,14 @@ var validate = validator.New()
 func Register(c *gin.Context) {
 	var input models.RegisterInput
 	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Default().Println("Error binding JSON:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
 	if err := validate.Struct(input); err != nil {
+		log.Default().Println("Validation error:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
@@ -40,6 +43,7 @@ func Register(c *gin.Context) {
 
 	createdUser, code, err := services.Register(database.DB, &user)
 	if err != nil {
+		log.Default().Println("Error registering user:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to register user", err.Error(), nil)
 		c.JSON(code, rd)
 		return
@@ -52,12 +56,14 @@ func Register(c *gin.Context) {
 func Login(c *gin.Context) {
 	var input models.LoginInput
 	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Default().Println("Error binding JSON:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
 	if err := validate.Struct(input); err != nil {
+		log.Default().Println("Validation error:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
@@ -65,11 +71,13 @@ func Login(c *gin.Context) {
 
 	user, code, err := services.Login(input.Email, input.Password)
 	if err != nil {
+		log.Default().Println("Error logging in:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Login failed", err.Error(), nil)
 		c.JSON(code, rd)
 		return
 	}
 
+	log.Default().Println("User logged in successfully:", user.Email)
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Login successful", user)
 	c.JSON(http.StatusOK, rd)
 }
