@@ -34,20 +34,20 @@ func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
 
 func GetVehicleByPlateNumber(plateNumber string) (*models.Vehicle, int, error) {
 	var vehicle models.Vehicle
-	if err := database.DB.Preload("User").Where("plate_number = ?", plateNumber).First(&vehicle).Error; err != nil {
+	if err := database.DB.Where("plate_number = ?", plateNumber).First(&vehicle).Error; err != nil {
 		return nil, http.StatusNotFound, fmt.Errorf("failed to fetch plate number: %v", err)
 	}
 	return &vehicle, http.StatusOK, nil
 }
 
-func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedByUserID string) (*models.VehicleActivityResponse, int, error) {
+func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedByUserID *string) (*models.VehicleActivityResponse, int, error) {
 
 	activity := models.VehicleActivity{
 		PlateNumber: req.PlateNumber,
 		VisitorType: req.VisitorType,
 		IsEntry:     req.IsEntry,
 		Timestamp:   time.Now(),
-		UserID:      &loggedByUserID,
+		UserID:      loggedByUserID,
 	}
 
 	if (req.EntryPointID != "" && req.ExitPointID != "") || (req.EntryPointID == "" && req.ExitPointID == "") {
@@ -100,7 +100,7 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 
 	case models.VisitorTypeGuest:
 		// For guests, record who logged them
-		activity.RegisteredBy = &loggedByUserID
+		activity.RegisteredBy = loggedByUserID
 
 		// Optional: Validate guest entry/exit logic if needed
 		if err := validateGuestEntryExit(db, req.PlateNumber, req.IsEntry); err != nil {
@@ -179,16 +179,16 @@ func CreateVehicleLog(vehicle *models.Vehicle, req models.LogVehicleInput) (*mod
 	return &log, http.StatusCreated, nil
 }
 
-func GetVehicleStatusByPlateNumber(plateNumber string) (string, error) {
-	vehicle, _, err := GetVehicleByPlateNumber(plateNumber)
+func IdentifyVehicle(plateNumber string) (string, int, error) {
+	vehicle, statuscode, err := GetVehicleByPlateNumber(plateNumber)
 	if err != nil {
-		return "", err
+		return "", statuscode, err
 	}
 
 	return GetVehicleStatus(vehicle.ID)
 }
 
-func GetVehicleStatus(vehicleID string) (string, error) {
+func GetVehicleStatus(vehicleID string) (string, int, error) {
 	db := database.DB
 	var lastLog models.VehicleActivity
 
@@ -198,15 +198,15 @@ func GetVehicleStatus(vehicleID string) (string, error) {
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return "outside", nil // Never entered
+			return "outside", http.StatusNotFound, fmt.Errorf("no logs found for vehicle with ID %s", vehicleID)
 		}
-		return "", fmt.Errorf("database error: %v", err)
+		return "", http.StatusInternalServerError, fmt.Errorf("database error while checking vehicle logs: %v", err)
 	}
 
 	if lastLog.IsEntry {
-		return "inside", nil
+		return "inside", http.StatusOK, nil
 	}
-	return "outside", nil
+	return "outside", http.StatusOK, nil
 }
 
 func GetVehicleLogHistory(vehicleID string, limit int) ([]models.VehicleActivity, error) {
@@ -268,7 +268,7 @@ func GetUserVehicles(db *gorm.DB, userID string) ([]models.Vehicle, int, error) 
 }
 
 func GetVehicleActivities(db *gorm.DB, vehicle_id string) ([]models.VehicleActivityResponse, int, error) {
-	var responses []models.VehicleActivityResponse
+	responses := []models.VehicleActivityResponse{}
 
 	exists := models.CheckExists(db, &models.Vehicle{}, "id = ?", vehicle_id)
 	if !exists {
@@ -284,11 +284,6 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string) ([]models.VehicleActiv
             vehicle_activities.is_entry,
             vehicle_activities.vehicle_type,
             vehicle_activities.timestamp,
-            vehicles.*,
-            users.*,
-            entry_points.*,
-            exit_points.*,
-            registered_by_users.*
         `).
 		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
 		Joins("LEFT JOIN users ON vehicle_activities.user_id = users.id").
@@ -305,19 +300,47 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string) ([]models.VehicleActiv
 	return responses, http.StatusOK, nil
 }
 
+func GetGuestVehicleActivitiesByPlateNumber(db *gorm.DB, plateNumber string) ([]models.VehicleActivityResponse, int, error) {
+	var activities []models.VehicleActivity
+
+	query := db.
+		Model(&models.VehicleActivity{}).
+		Select(`
+			vehicle_activities.id,
+			vehicle_activities.plate_number,
+			vehicle_activities.visitor_type,
+			vehicle_activities.is_entry,
+			vehicle_activities.vehicle_type,
+			vehicle_activities.timestamp
+		`).
+		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
+		Joins("LEFT JOIN users ON vehicle_activities.user_id = users.id").
+		Joins("LEFT JOIN access_exit_points AS entry_points ON vehicle_activities.entry_point_id = entry_points.id").
+		Joins("LEFT JOIN access_exit_points AS exit_points ON vehicle_activities.exit_point_id = exit_points.id").
+		Joins("LEFT JOIN users AS registered_by_users ON vehicle_activities.registered_by = registered_by_users.id").
+		Where("vehicle_activities.plate_number = ? AND vehicle_activities.visitor_type = ?", plateNumber, models.VisitorTypeGuest).
+		Order("vehicle_activities.timestamp desc")
+
+	if err := query.Find(&activities).Error; err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("failed to get guest vehicle activities: %v", err)
+	}
+
+	responses := make([]models.VehicleActivityResponse, len(activities))
+	for i, activity := range activities {
+		responses[i] = convertToActivityResponse(activity)
+	}
+
+	return responses, http.StatusOK, nil                                                            
+}
+
 func convertToActivityResponse(activity models.VehicleActivity) models.VehicleActivityResponse {
 	return models.VehicleActivityResponse{
-		ID:           activity.ID,
-		PlateNumber:  activity.PlateNumber,
-		VisitorType:  activity.VisitorType,
-		IsEntry:      activity.IsEntry,
-		VehicleType:  activity.VehicleType,
-		Timestamp:    activity.Timestamp,
-		Vehicle:      activity.Vehicle,
-		User:         activity.User,
-		EntryPoint:   activity.EntryPoint,
-		ExitPoint:    activity.ExitPoint,
-		RegisteredBy: activity.RegisteredByUser,
+		ID:          activity.ID,
+		PlateNumber: activity.PlateNumber,
+		VisitorType: activity.VisitorType,
+		IsEntry:     activity.IsEntry,
+		VehicleType: activity.VehicleType,
+		Timestamp:   activity.Timestamp,
 	}
 }
 
@@ -422,17 +445,17 @@ func GenerateActivitySummary(activities []models.VehicleActivityResponse) map[st
 			summary["entry_exit_balance"] = summary["entry_exit_balance"].(int) + 1
 
 			// Track entry points
-			if activity.EntryPoint != nil {
-				entryPoints[activity.EntryPoint.Name]++
-			}
+			// if activity.EntryPoint != nil {
+			// 	entryPoints[activity.EntryPoint.Name]++
+			// }
 		} else {
 			summary["by_action"].(map[string]int)["exits"]++
 			summary["entry_exit_balance"] = summary["entry_exit_balance"].(int) - 1
 
 			// Track exit points
-			if activity.ExitPoint != nil {
-				exitPoints[activity.ExitPoint.Name]++
-			}
+			// if activity.ExitPoint != nil {
+			// 	exitPoints[activity.ExitPoint.Name]++
+			// }
 		}
 
 		// Count by vehicle type

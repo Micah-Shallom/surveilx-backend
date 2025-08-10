@@ -85,7 +85,7 @@ func LogVehicleActivity(c *gin.Context) {
 	// Get the user ID of who is logging this activity
 	loggedByUserID := c.MustGet("user_id").(string)
 
-	activity, code, err := services.LogVehicleActivity(database.DB, input, loggedByUserID)
+	activity, code, err := services.LogVehicleActivity(database.DB, input, &loggedByUserID)
 	if err != nil {
 		log.Default().Println("Error logging vehicle activity:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to log vehicle activity", err.Error(), nil)
@@ -99,6 +99,40 @@ func LogVehicleActivity(c *gin.Context) {
 	}
 
 	log.Default().Println(message, activity.PlateNumber, "by user ID:", loggedByUserID)
+	rd := utility.BuildSuccessResponse(code, message, activity)
+	c.JSON(code, rd)
+}
+
+func SystemLogVehicleActivity(c *gin.Context) {
+	var input models.LogVehicleActivityInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Default().Println("Error binding JSON:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	if err := validate.Struct(input); err != nil {
+		log.Default().Println("Validation error:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	activity, code, err := services.LogVehicleActivity(database.DB, input, nil)
+	if err != nil {
+		log.Default().Println("Error logging vehicle activity:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to log vehicle activity", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	message := "Vehicle activity logged successfully"
+	if input.VisitorType == models.VisitorTypeGuest {
+		message = "Guest vehicle activity logged successfully"
+	}
+
+	log.Default().Println(message, activity.PlateNumber, "by user ID:", nil)
 	rd := utility.BuildSuccessResponse(code, message, activity)
 	c.JSON(code, rd)
 }
@@ -119,7 +153,7 @@ func GetVehicleLogs(c *gin.Context) {
 }
 
 // GetUserVehicleActivities returns activities for vehicles owned by the authenticated user
-func GetUserVehicleActivities(c *gin.Context) {
+func GetVehicleActivities(c *gin.Context) {
 	vehicle_id := c.Param("vehicle_id")
 
 	err := utility.ValidateUUID(vehicle_id)
@@ -143,14 +177,37 @@ func GetUserVehicleActivities(c *gin.Context) {
 	c.JSON(http.StatusOK, rd)
 }
 
-func GetVehicleStatus(c *gin.Context) {
+func GetGuestVehicleActivitiesByPlateNumber(c *gin.Context) {
 	plateNumber := c.Param("plateNumber")
 
-	status, err := services.GetVehicleStatusByPlateNumber(plateNumber)
+	if plateNumber == "" {
+		log.Default().Println("Plate number is required")
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Plate number is required", "Please provide a valid plate number", nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	data, code, err := services.GetGuestVehicleActivitiesByPlateNumber(database.DB, plateNumber)
+	if err != nil {
+		log.Default().Println("Error fetching guest vehicle activities:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to get guest vehicle activities", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	log.Default().Println("Guest vehicle activities retrieved successfully for plate number:", plateNumber)
+	rd := utility.BuildSuccessResponse(http.StatusOK, "Guest vehicle activities retrieved successfully", data)
+	c.JSON(http.StatusOK, rd)
+}
+
+func IdentifyVehicle(c *gin.Context) {
+	plateNumber := c.Param("plateNumber")
+
+	status,code, err := services.IdentifyVehicle(plateNumber)
 	if err != nil {
 		log.Default().Println("Error getting vehicle status:", err)
-		rd := utility.BuildErrorResponse(http.StatusNotFound, "error", "Failed to get vehicle status", err.Error(), nil)
-		c.JSON(http.StatusNotFound, rd)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle status", err.Error(), nil)
+		c.JSON(code, rd)
 		return
 	}
 
@@ -158,11 +215,12 @@ func GetVehicleStatus(c *gin.Context) {
 		"plate_number": plateNumber,
 		"status":       status,
 	}
-
+ 
 	log.Default().Println("Vehicle status retrieved successfully for plate number:", plateNumber)
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Vehicle status retrieved successfully", data)
 	c.JSON(http.StatusOK, rd)
 }
+
 
 // GetVehicleLogHistory returns detailed log history for a vehicle
 func GetVehicleLogHistory(c *gin.Context) {

@@ -10,7 +10,7 @@ import (
 type Vehicle struct {
 	ID          string         `json:"id" gorm:"type:uuid;primary_key;"`
 	UserID      string         `json:"user_id" gorm:"type:uuid;"`
-	User        User           `json:"user" gorm:"foreignKey:UserID"`
+	User        User           `json:"-" gorm:"foreignKey:UserID"`
 	PlateNumber string         `json:"plate_number" gorm:"unique"`
 	Type        string         `json:"type" validate:"oneof=bus car bike"`
 	Model       string         `json:"model"`
@@ -88,11 +88,4 @@ type VehicleActivityResponse struct {
 	IsEntry     bool        `json:"is_entry"`
 	VehicleType string      `json:"vehicle_type"`
 	Timestamp   time.Time   `json:"timestamp"`
-
-	// Optional fields based on visitor type
-	Vehicle      *Vehicle         `json:"vehicle,omitempty"`
-	User         *User            `json:"user,omitempty"`
-	EntryPoint   *AccessExitPoint `json:"entry_point,omitempty"`
-	ExitPoint    *AccessExitPoint `json:"exit_point,omitempty"`
-	RegisteredBy *User            `json:"registered_by,omitempty"`
 }

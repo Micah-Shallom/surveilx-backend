@@ -9,37 +9,28 @@ import (
 )
 
 func VehicleActivityRoutes(r *gin.Engine, api_version string) {
-	// Public routes
 
 	// Regular user routes
-	user := r.Group(fmt.Sprintf("%v/users", api_version))
-	user.Use(middleware.AuthMiddleware())
+	activityRoutes := r.Group(fmt.Sprintf("%v/vehicles", api_version))
+	activityRoutes.Use(middleware.AuthMiddleware())
 	{
 		// Vehicle management
-		user.POST("/vehicles", controllers.RegisterVehicle)
-		user.GET("/vehicles", controllers.GetUserVehicles)
-		user.POST("/vehicles/log-entry-exit", controllers.LogVehicleActivity)
-		user.GET("/vehicles/:vehicle_id/activities", controllers.GetUserVehicleActivities)
-		user.GET("/vehicles/status/:plateNumber", controllers.GetVehicleStatus) 
+		activityRoutes.POST("/register", controllers.RegisterVehicle)
+		activityRoutes.GET("/fetch_vehicles", controllers.GetUserVehicles)
+		activityRoutes.GET("/:vehicle_id/activities", controllers.GetVehicleActivities)
+		activityRoutes.GET("/guest/activities/:plateNumber", controllers.GetGuestVehicleActivitiesByPlateNumber)
+		activityRoutes.POST("/log-vehicle", controllers.LogVehicleActivity) //keep here temporarily for testing
+
 	}
 
-	// Security personnel routes
-	security_admin := r.Group(fmt.Sprintf("%v/security", api_version))
-	security_admin.Use(middleware.AuthMiddleware(), middleware.SecurityMiddleware())
+	securityRoutes := r.Group(fmt.Sprintf("%v/vehicles", api_version))
+	securityRoutes.Use(middleware.SecurityMiddleware())
 	{
-
-		// Guest vehicle management
-		security_admin.POST("/vehicles/log-vehicle", controllers.LogVehicleActivity)
-
-		// Monitoring and reports
-		security_admin.GET("/vehicles/status/:plateNumber", controllers.GetVehicleStatus)
-		security_admin.GET("/reports/activity", controllers.GetActivityReport)
+		// securityRoutes.POST("/log-vehicle", controllers.LogVehicleActivity)
 	}
 
-	// Admin routes (if needed)
-	admin := r.Group("/admin")
-	admin.Use(middleware.AuthMiddleware()) // Add admin middleware if you have one
-	{
-		// Could add endpoints for managing access points, users, etc.
-	}
+	unauthRoutes := r.Group(fmt.Sprintf("%v/vehicles", api_version))
+	unauthRoutes.GET("/identify/:plateNumber", controllers.IdentifyVehicle)
+	unauthRoutes.POST("/sys-log-vehicle", controllers.SystemLogVehicleActivity) //the model backend logs vehicle activity without user context
+
 }
