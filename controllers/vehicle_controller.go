@@ -50,6 +50,21 @@ func RegisterVehicle(c *gin.Context) {
 	c.JSON(code, rd)
 }
 
+func DeRegisterVehicle(c *gin.Context) {
+	vehicle_id := c.Param("vehicle_id")
+
+	code, err := services.DeRegisterVehicle(database.DB, vehicle_id)
+	if err != nil {
+		log.Default().Println("Error deregistering vehicle:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to deregister vehicle", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	rd := utility.BuildSuccessResponse(code, "Vehicle successfully deregistered", nil)
+	c.JSON(code, rd)
+}
+
 func GetUserVehicles(c *gin.Context) {
 	userID := c.MustGet("user_id").(string)
 

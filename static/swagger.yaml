@@ -422,6 +422,52 @@ paths:
                 $ref: '#/components/schemas/VehicleActivity'
         '400':
           $ref: '#/components/responses/BadRequest'
+  /vehicles/deregister/{vehicle_id}:
+    delete:
+      tags:
+        - Vehicles
+      summary: Deregister a vehicle
+      description: Removes a vehicle from the system using its unique ID.
+      parameters:
+        - name: vehicle_id
+          in: path
+          required: true
+          description: Unique identifier of the vehicle to deregister
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vehicle successfully deregistered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  status_code:
+                    type: integer
+                    example: 200
+                  message:
+                    type: string
+                    example: Vehicle successfully deregistered
+        '404':
+          description: Vehicle not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  status_code:
+                    type: integer
+                    example: 404
+                  message:
+                    type: string
+                    example: Vehicle not found
 components:
   schemas:
     User:

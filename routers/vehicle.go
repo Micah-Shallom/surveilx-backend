@@ -16,6 +16,7 @@ func VehicleActivityRoutes(r *gin.Engine, api_version string) {
 	{
 		// Vehicle management
 		activityRoutes.POST("/register", controllers.RegisterVehicle)
+		activityRoutes.DELETE("/deregister/:vehicle_id", controllers.DeRegisterVehicle)
 		activityRoutes.GET("/fetch_vehicles", controllers.GetUserVehicles)
 		activityRoutes.GET("/:vehicle_id/activities", controllers.GetVehicleActivities)
 		activityRoutes.GET("/guest/activities/:plateNumber", controllers.GetGuestVehicleActivitiesByPlateNumber)

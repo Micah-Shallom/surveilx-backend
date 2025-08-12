@@ -89,3 +89,11 @@ type VehicleActivityResponse struct {
 	VehicleType string      `json:"vehicle_type"`
 	Timestamp   time.Time   `json:"timestamp"`
 }
+
+func (v *Vehicle) DeRegister(db *gorm.DB) error {
+    if err := db.Delete(&v).Error; err != nil {
+        return err
+    }
+	
+    return nil
+}

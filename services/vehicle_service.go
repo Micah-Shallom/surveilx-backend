@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"survielx-backend/database"
@@ -30,6 +31,22 @@ func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
 	}
 
 	return &fullVehicle, http.StatusCreated, nil
+}
+
+func DeRegisterVehicle(db *gorm.DB, vehicle_id string) (int, error) {
+	var vehicle models.Vehicle
+
+	exists := models.CheckExists(db, &vehicle, "id = ?", vehicle_id)
+	if !exists {
+		return http.StatusNotFound, errors.New("vehicle does not exist")
+	}
+
+	err := vehicle.DeRegister(db)
+	if err != nil {
+		return http.StatusBadRequest, err
+	}
+
+	return http.StatusOK, nil
 }
 
 func GetVehicleByPlateNumber(plateNumber string) (*models.Vehicle, int, error) {
@@ -330,7 +347,7 @@ func GetGuestVehicleActivitiesByPlateNumber(db *gorm.DB, plateNumber string) ([]
 		responses[i] = convertToActivityResponse(activity)
 	}
 
-	return responses, http.StatusOK, nil                                                            
+	return responses, http.StatusOK, nil
 }
 
 func convertToActivityResponse(activity models.VehicleActivity) models.VehicleActivityResponse {
