@@ -8,10 +8,10 @@ import (
 )
 
 type AccessExitPoint struct {
-	ID        string         `gorm:"type:uuid;primary_key;" json:"id"`
-	Name      string         `json:"name" gorm:"unique"`
-	CreatedAt time.Time      `json:"createdAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt"`
+    ID        string         `gorm:"column:id;type:uuid;primaryKey;" json:"id"`
+    Name      string         `json:"name" gorm:"column:name;unique"`
+    CreatedAt time.Time      `json:"createdAt" gorm:"column:created_at"`
+    DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt" gorm:"column:deleted_at"`
 }
 
 func (point *AccessExitPoint) BeforeCreate(tx *gorm.DB) (err error) {
