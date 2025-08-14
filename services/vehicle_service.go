@@ -20,14 +20,14 @@ func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
 	}
 
 	if err := db.Create(vehicle).Error; err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, http.StatusBadRequest, err
 	}
 
 	var fullVehicle models.Vehicle
 	if err := db.
 		Preload("User").
 		First(&fullVehicle, "id = ?", vehicle.ID).Error; err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, http.StatusBadRequest, err
 	}
 
 	return &fullVehicle, http.StatusCreated, nil
@@ -127,7 +127,7 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 
 	// Create the activity record
 	if err := db.Create(&activity).Error; err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("failed to create activity log: %v", err)
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to create activity log: %v", err)
 	}
 
 	// Return with preloaded relationships
@@ -144,7 +144,7 @@ func getVehicleActivityResponse(db *gorm.DB, activityID string) (*models.Vehicle
 		First(&activity, "id = ?", activityID).Error
 
 	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("failed to get activity: %v", err)
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to get activity: %v", err)
 	}
 
 	response := convertToActivityResponse(activity)
@@ -154,7 +154,7 @@ func getVehicleActivityResponse(db *gorm.DB, activityID string) (*models.Vehicle
 func GetVehicleLogs(userId string) (*[]models.VehicleActivity, int, error) {
 	var logs []models.VehicleActivity
 	if err := database.DB.Where("user_id = ?", userId).Find(&logs).Error; err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, http.StatusBadRequest, err
 	}
 	return &logs, http.StatusOK, nil
 }
@@ -190,7 +190,7 @@ func CreateVehicleLog(vehicle *models.Vehicle, req models.LogVehicleInput) (*mod
 	}
 
 	if err := database.DB.Create(&log).Error; err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, http.StatusBadRequest, err
 	}
 
 	return &log, http.StatusCreated, nil
@@ -217,7 +217,7 @@ func GetVehicleStatus(vehicleID string) (string, int, error) {
 		if err == gorm.ErrRecordNotFound {
 			return "outside", http.StatusNotFound, fmt.Errorf("no logs found for vehicle with ID %s", vehicleID)
 		}
-		return "", http.StatusInternalServerError, fmt.Errorf("database error while checking vehicle logs: %v", err)
+		return "", http.StatusBadRequest, fmt.Errorf("database error while checking vehicle logs: %v", err)
 	}
 
 	if lastLog.IsEntry {
@@ -278,7 +278,7 @@ func GetUserVehicles(db *gorm.DB, userID string) ([]models.Vehicle, int, error) 
 	var vehicles []models.Vehicle
 
 	if err := db.Where("user_id = ?", userID).Find(&vehicles).Error; err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("failed to get user vehicles: %v", err)
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to get user vehicles: %v", err)
 	}
 
 	return vehicles, http.StatusOK, nil
@@ -339,7 +339,7 @@ func GetGuestVehicleActivitiesByPlateNumber(db *gorm.DB, plateNumber string) ([]
 		Order("vehicle_activities.timestamp desc")
 
 	if err := query.Find(&activities).Error; err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("failed to get guest vehicle activities: %v", err)
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to get guest vehicle activities: %v", err)
 	}
 
 	responses := make([]models.VehicleActivityResponse, len(activities))

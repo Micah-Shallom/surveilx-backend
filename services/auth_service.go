@@ -75,7 +75,7 @@ func Login(email string, password string) (*models.User, int, error) {
 		if err == gorm.ErrRecordNotFound {
 			return nil, http.StatusUnauthorized, errors.New("invalid email or password")
 		}
-		return nil, http.StatusInternalServerError, errors.New("database error")
+		return nil, http.StatusBadRequest, errors.New("database error")
 	}
 
 	return loginAndGenerateToken(&user, password)
@@ -95,7 +95,7 @@ func loginAndGenerateToken(user *models.User, password string) (*models.User, in
 
 	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
-		return nil, http.StatusInternalServerError, errors.New("failed to create token")
+		return nil, http.StatusBadRequest, errors.New("failed to create token")
 	}
 
 	user.Token = tokenString

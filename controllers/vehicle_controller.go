@@ -218,7 +218,7 @@ func GetGuestVehicleActivitiesByPlateNumber(c *gin.Context) {
 func IdentifyVehicle(c *gin.Context) {
 	plateNumber := c.Param("plateNumber")
 
-	status,code, err := services.IdentifyVehicle(plateNumber)
+	status, code, err := services.IdentifyVehicle(plateNumber)
 	if err != nil {
 		log.Default().Println("Error getting vehicle status:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle status", err.Error(), nil)
@@ -230,12 +230,11 @@ func IdentifyVehicle(c *gin.Context) {
 		"plate_number": plateNumber,
 		"status":       status,
 	}
- 
+
 	log.Default().Println("Vehicle status retrieved successfully for plate number:", plateNumber)
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Vehicle status retrieved successfully", data)
 	c.JSON(http.StatusOK, rd)
 }
-
 
 // GetVehicleLogHistory returns detailed log history for a vehicle
 func GetVehicleLogHistory(c *gin.Context) {
@@ -256,8 +255,8 @@ func GetVehicleLogHistory(c *gin.Context) {
 
 	logs, err := services.GetVehicleLogHistory(vehicle.ID, limit)
 	if err != nil {
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get vehicle log history", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to get vehicle log history", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 
@@ -270,7 +269,6 @@ func GetVehicleLogHistory(c *gin.Context) {
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Vehicle log history retrieved successfully", data)
 	c.JSON(http.StatusOK, rd)
 }
-
 
 // GetActivityReport returns activity report for a date range
 func GetActivityReport(c *gin.Context) {
@@ -312,8 +310,8 @@ func GetActivityReport(c *gin.Context) {
 
 	activities, err := services.GetAllVehicleActivities(from, to, visitorType)
 	if err != nil {
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get activity report", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to get activity report", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 

@@ -15,8 +15,8 @@ func GetUsers(c *gin.Context) {
 	users, err := services.GetUsers(database.DB)
 	if err != nil {
 		log.Default().Println("Error fetching users:", err)
-		rd := utility.BuildErrorResponse(http.StatusInternalServerError, "error", "Failed to get users", err.Error(), nil)
-		c.JSON(http.StatusInternalServerError, rd)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to get users", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
 

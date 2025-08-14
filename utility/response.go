@@ -39,7 +39,7 @@ func ResponseMessage(code int, status string, name string, message string, err a
 		pagination = nil
 	}
 
-	if code == http.StatusInternalServerError {
+	if code == http.StatusBadRequest {
 		message = "internal server error"
 		err = message
 	}
