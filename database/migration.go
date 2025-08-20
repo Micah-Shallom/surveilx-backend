@@ -12,7 +12,7 @@ func MigrateDatabase() {
 		&models.AccessExitPoint{},
 		&models.Vehicle{},
 		&models.VehicleActivity{},
-		&models.GuestVehicle{},
+		&models.GuestVehicleActivity{},
 	)
 
 	if err != nil {

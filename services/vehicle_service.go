@@ -56,14 +56,13 @@ func GetVehicleByPlateNumber(plateNumber string) (*models.Vehicle, int, error) {
 	return &vehicle, http.StatusOK, nil
 }
 
-func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedByUserID *string) (*models.VehicleActivityResponse, int, error) {
+func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput) (*models.VehicleActivityResponse, int, error) {
 
 	activity := models.VehicleActivity{
 		PlateNumber: req.PlateNumber,
 		VisitorType: req.VisitorType,
 		IsEntry:     req.IsEntry,
 		Timestamp:   time.Now(),
-		UserID:      loggedByUserID,
 	}
 
 	if (req.EntryPointID != "" && req.ExitPointID != "") || (req.EntryPointID == "" && req.ExitPointID == "") {
@@ -95,37 +94,17 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 		activity.ExitPointID = &req.ExitPointID
 	}
 
-	switch req.VisitorType {
-	case models.VisitorTypeRegistered:
-		vehicle, _, err := GetVehicleByPlateNumber(req.PlateNumber)
-		if err != nil {
-			return nil, http.StatusNotFound, fmt.Errorf("registered vehicle not found: %v", err)
-		}
+	vehicle, _, err := GetVehicleByPlateNumber(req.PlateNumber)
+	if err != nil {
+		return nil, http.StatusNotFound, fmt.Errorf("registered vehicle not found: %v", err)
+	}
 
-		activity.VehicleID = &vehicle.ID
-		activity.UserID = &vehicle.UserID
-		activity.VehicleType = vehicle.Type
-		activity.Model = vehicle.Model
+	activity.VehicleID = &vehicle.ID
+	activity.VehicleType = vehicle.Type
+	activity.Model = vehicle.Model
 
-		if err := validateVehicleEntryExit(db, vehicle.ID, req.IsEntry); err != nil {
-			return nil, http.StatusBadRequest, err
-		}
-
-	case models.VisitorTypeGuest:
-		activity.RegisteredBy = loggedByUserID
-
-		vehicle, _, err := GetVehicleByPlateNumber(req.PlateNumber)
-		if err == nil {
-			activity.VehicleID = &vehicle.ID
-			activity.UserID = &vehicle.UserID
-			activity.VehicleType = vehicle.Type
-			activity.Model = vehicle.Model
-			activity.VisitorType = models.VisitorTypeGuest
-		}
-
-		if err := validateGuestEntryExit(db, req.PlateNumber, req.IsEntry); err != nil {
-			return nil, http.StatusBadRequest, err
-		}
+	if err := validateVehicleEntryExit(db, vehicle.ID, req.IsEntry); err != nil {
+		return nil, http.StatusBadRequest, err
 	}
 
 	if err := db.Create(&activity).Error; err != nil {
@@ -172,12 +151,10 @@ func CreateVehicleLog(vehicle *models.Vehicle, req models.LogVehicleInput) (*mod
 
 	log := models.VehicleActivity{
 		VehicleID:    &vehicle.ID,
-		UserID:       &vehicle.UserID,
 		Timestamp:    time.Now(),
 		IsEntry:      isEntry,
 		VehicleType:  vehicle.Type,
 		PlateNumber:  vehicle.PlateNumber,
-		RegisteredBy: &vehicle.UserID, // Assuming the vehicle is registered by the user
 		CreatedAt:    time.Now(),
 	}
 

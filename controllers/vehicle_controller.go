@@ -96,10 +96,7 @@ func LogVehicleActivity(c *gin.Context) {
 		return
 	}
 
-	// Get the user ID of who is logging this activity
-	loggedByUserID := c.MustGet("user_id").(string)
-
-	activity, code, err := services.LogVehicleActivity(database.DB, input, &loggedByUserID)
+	activity, code, err := services.LogVehicleActivity(database.DB, input)
 	if err != nil {
 		log.Default().Println("Error logging vehicle activity:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to log vehicle activity", err.Error(), nil)
@@ -112,7 +109,6 @@ func LogVehicleActivity(c *gin.Context) {
 		message = "Guest vehicle activity logged successfully"
 	}
 
-	log.Default().Println(message, activity.PlateNumber, "by user ID:", loggedByUserID)
 	rd := utility.BuildSuccessResponse(code, message, activity)
 	c.JSON(code, rd)
 }
@@ -133,7 +129,7 @@ func SystemLogVehicleActivity(c *gin.Context) {
 		return
 	}
 
-	activity, code, err := services.LogVehicleActivity(database.DB, input, nil)
+	activity, code, err := services.LogVehicleActivity(database.DB, input)
 	if err != nil {
 		log.Default().Println("Error logging vehicle activity:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to log vehicle activity", err.Error(), nil)
@@ -273,10 +269,10 @@ func GetVehicleLogHistory(c *gin.Context) {
 func FetchVehiclesLogs(c *gin.Context) {
 	query := c.Query("user_type")
 
-	response, statusCode, err := services.FetchAllVehicles(database.DB, query)
+	response, statusCode, err := services.FetchVehiclesLogs(database.DB, query)
 	if err != nil {
 		log.Default().Println("Failed to fetch vehicles")
-		rd := utility.BuildErrorResponse(statusCode, "error", "failed to fetch vehicles", err.Error())
+		rd := utility.BuildErrorResponse(statusCode, "error", "failed to fetch vehicles", err.Error(), nil)
 		c.JSON(statusCode, rd)
 		return
 	}

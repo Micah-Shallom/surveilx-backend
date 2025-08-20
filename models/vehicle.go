@@ -48,7 +48,6 @@ type VehicleActivity struct {
 	Model       string      `json:"model" gorm:"column:model;not null;index"`
 	VisitorType VisitorType `json:"visitor_type" gorm:"column:visitor_type;type:varchar(20);not null;index"`
 	VehicleID   *string     `json:"vehicle_id,omitempty" gorm:"column:vehicle_id;type:uuid;index"`
-	UserID      *string     `json:"user_id,omitempty" gorm:"column:user_id;type:uuid;index"`
 
 	// Common fields
 	IsEntry     bool   `json:"is_entry" gorm:"column:is_entry"`
