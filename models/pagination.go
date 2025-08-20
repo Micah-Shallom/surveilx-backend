@@ -15,10 +15,16 @@ type Pagination struct {
 	Page  int
 	Limit int
 }
+
 type PaginationResponse struct {
 	CurrentPage     int `json:"current_page"`
 	PageCount       int `json:"page_count"`
 	TotalPagesCount int `json:"total_pages_count"`
+}
+
+type PaginatedVehicleResponse struct {
+	Data       interface{}        `json:"data"`
+	Pagination PaginationResponse `json:"pagination"`
 }
 
 func GetPagination(c *gin.Context) Pagination {

@@ -47,15 +47,19 @@ type VehicleActivity struct {
 	PlateNumber string      `json:"plate_number" gorm:"column:plate_number;not null;index"`
 	Model       string      `json:"model" gorm:"column:model;not null;index"`
 	VisitorType VisitorType `json:"visitor_type" gorm:"column:visitor_type;type:varchar(20);not null;index"`
-	VehicleID   *string     `json:"vehicle_id,omitempty" gorm:"column:vehicle_id;type:uuid;index"`
+
+	Vehicle   *Vehicle `json:"vehicle,omitempty" gorm:"foreignKey:VehicleID"`
+	VehicleID *string  `json:"vehicle_id,omitempty" gorm:"column:vehicle_id;type:uuid;index"`
 
 	// Common fields
 	IsEntry     bool   `json:"is_entry" gorm:"column:is_entry"`
 	VehicleType string `json:"vehicle_type" gorm:"column:vehicle_type;type:varchar(20)" validate:"oneof=bus car bike"`
 
 	// Entry/Exit points
-	EntryPointID *string `json:"entry_point_id,omitempty" gorm:"column:entry_point_id;type:uuid"`
-	ExitPointID  *string `json:"exit_point_id,omitempty" gorm:"column:exit_point_id;type:uuid"`
+	EntryPointID *string          `json:"entry_point_id,omitempty" gorm:"column:entry_point_id;type:uuid"`
+	ExitPointID  *string          `json:"exit_point_id,omitempty" gorm:"column:exit_point_id;type:uuid"`
+	EntryPoint   *AccessExitPoint `json:"entry_point,omitempty" gorm:"foreignKey:EntryPointID"`
+	ExitPoint    *AccessExitPoint `json:"exit_point,omitempty" gorm:"foreignKey:ExitPointID"`
 
 	Timestamp time.Time      `json:"timestamp" gorm:"column:timestamp;not null;default:CURRENT_TIMESTAMP"`
 	CreatedAt time.Time      `json:"created_at" gorm:"column:created_at"`
@@ -64,11 +68,18 @@ type VehicleActivity struct {
 }
 
 type GuestVehicleActivity struct {
-	ID          string    `json:"id" gorm:"column:id;type:uuid;primaryKey;"`
-	PlateNumber string    `json:"plate_number" gorm:"column:plate_number;unique"`
-	Timestamp   time.Time `json:"timestamp" gorm:"column:timestamp;not null;default:CURRENT_TIMESTAMP"`
-	CreatedAt time.Time      `json:"createdAt" gorm:"column:created_at"`
-	DeletedAt gorm.DeletedAt `json:"deletedAt" gorm:"column:deleted_at"`
+	ID          string         `json:"id" gorm:"column:id;type:uuid;primaryKey;"`
+	PlateNumber string         `json:"plate_number" gorm:"column:plate_number;"`
+
+	IsEntry     bool           `json:"is_entry" gorm:"column:is_entry"`
+	EntryPointID *string          `json:"entry_point_id,omitempty" gorm:"column:entry_point_id;type:uuid"`
+	ExitPointID  *string          `json:"exit_point_id,omitempty" gorm:"column:exit_point_id;type:uuid"`
+	EntryPoint   *AccessExitPoint `json:"entry_point,omitempty" gorm:"foreignKey:EntryPointID"`
+	ExitPoint    *AccessExitPoint `json:"exit_point,omitempty" gorm:"foreignKey:ExitPointID"`
+
+	Timestamp   time.Time      `json:"timestamp" gorm:"column:timestamp;not null;default:CURRENT_TIMESTAMP"`
+	CreatedAt   time.Time      `json:"createdAt" gorm:"column:created_at"`
+	DeletedAt   gorm.DeletedAt `json:"deletedAt" gorm:"column:deleted_at"`
 }
 
 func (va *VehicleActivity) BeforeCreate(tx *gorm.DB) (err error) {
@@ -89,7 +100,7 @@ func (va *GuestVehicleActivity) BeforeCreate(tx *gorm.DB) (err error) {
 
 type LogVehicleActivityInput struct {
 	PlateNumber  string      `json:"plate_number" binding:"required"`
-	VisitorType  VisitorType `json:"visitor_type" binding:"required" validate:"oneof=registered guest"`
+	VisitorType  VisitorType `json:"visitor_type"`
 	IsEntry      bool        `json:"is_entry"`
 	EntryPointID string      `json:"entry_point_id,omitempty"`
 	ExitPointID  string      `json:"exit_point_id,omitempty"`
@@ -100,8 +111,8 @@ type VehicleActivityResponse struct {
 	PlateNumber string      `json:"plate_number"`
 	VisitorType VisitorType `json:"visitor_type"`
 	IsEntry     bool        `json:"is_entry"`
-	VehicleType string      `json:"vehicle_type"`
-	Model       string      `json:"model"`
+	VehicleType string      `json:"vehicle_type,omitempty"`
+	Model       string      `json:"model,omitempty"`
 	Timestamp   time.Time   `json:"timestamp"`
 }
 

@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"survielx-backend/database"
 	"survielx-backend/models"
@@ -56,47 +57,47 @@ func GetVehicleByPlateNumber(plateNumber string) (*models.Vehicle, int, error) {
 	return &vehicle, http.StatusOK, nil
 }
 
-func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput) (*models.VehicleActivityResponse, int, error) {
+func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput) (int, error) {
 
 	activity := models.VehicleActivity{
 		PlateNumber: req.PlateNumber,
-		VisitorType: req.VisitorType,
+		VisitorType: models.VisitorTypeRegistered,
 		IsEntry:     req.IsEntry,
 		Timestamp:   time.Now(),
 	}
 
 	if (req.EntryPointID != "" && req.ExitPointID != "") || (req.EntryPointID == "" && req.ExitPointID == "") {
-		return nil, http.StatusBadRequest, fmt.Errorf("either both entry and exit points must be provided or neither")
+		return http.StatusBadRequest, fmt.Errorf("either both entry and exit points must be provided or neither")
 	}
 
 	if req.IsEntry {
 		if req.EntryPointID == "" {
-			return nil, http.StatusBadRequest, fmt.Errorf("entry point ID is required for entry activity")
+			return http.StatusBadRequest, fmt.Errorf("entry point ID is required for entry activity")
 		}
 	} else {
 		if req.ExitPointID == "" {
-			return nil, http.StatusBadRequest, fmt.Errorf("exit point ID is required for exit activity")
+			return http.StatusBadRequest, fmt.Errorf("exit point ID is required for exit activity")
 		}
 	}
 
 	if req.EntryPointID != "" {
 		exist := models.CheckExists(db, &models.AccessExitPoint{}, "id = ?", req.EntryPointID)
 		if !exist {
-			return nil, http.StatusNotFound, fmt.Errorf("entry point with ID %s not found", req.EntryPointID)
+			return http.StatusNotFound, fmt.Errorf("entry point with ID %s not found", req.EntryPointID)
 		}
 		activity.EntryPointID = &req.EntryPointID
 	}
 	if req.ExitPointID != "" {
 		exist := models.CheckExists(db, &models.AccessExitPoint{}, "id = ?", req.ExitPointID)
 		if !exist {
-			return nil, http.StatusNotFound, fmt.Errorf("exit point with ID %s not found", req.ExitPointID)
+			return http.StatusNotFound, fmt.Errorf("exit point with ID %s not found", req.ExitPointID)
 		}
 		activity.ExitPointID = &req.ExitPointID
 	}
 
 	vehicle, _, err := GetVehicleByPlateNumber(req.PlateNumber)
 	if err != nil {
-		return nil, http.StatusNotFound, fmt.Errorf("registered vehicle not found: %v", err)
+		return http.StatusNotFound, fmt.Errorf("registered vehicle not found: %v", err)
 	}
 
 	activity.VehicleID = &vehicle.ID
@@ -104,14 +105,14 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput) (*model
 	activity.Model = vehicle.Model
 
 	if err := validateVehicleEntryExit(db, vehicle.ID, req.IsEntry); err != nil {
-		return nil, http.StatusBadRequest, err
+		return http.StatusBadRequest, err
 	}
 
 	if err := db.Create(&activity).Error; err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("failed to create activity log: %v", err)
+		return http.StatusBadRequest, fmt.Errorf("failed to create activity log: %v", err)
 	}
 
-	return getVehicleActivityResponse(db, activity.ID)
+	return http.StatusOK, nil
 }
 
 func getVehicleActivityResponse(db *gorm.DB, activityID string) (*models.VehicleActivityResponse, int, error) {
@@ -150,12 +151,12 @@ func CreateVehicleLog(vehicle *models.Vehicle, req models.LogVehicleInput) (*mod
 	}
 
 	log := models.VehicleActivity{
-		VehicleID:    &vehicle.ID,
-		Timestamp:    time.Now(),
-		IsEntry:      isEntry,
-		VehicleType:  vehicle.Type,
-		PlateNumber:  vehicle.PlateNumber,
-		CreatedAt:    time.Now(),
+		VehicleID:   &vehicle.ID,
+		Timestamp:   time.Now(),
+		IsEntry:     isEntry,
+		VehicleType: vehicle.Type,
+		PlateNumber: vehicle.PlateNumber,
+		CreatedAt:   time.Now(),
 	}
 
 	if entryPointID != "" {
@@ -294,10 +295,8 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string) ([]models.VehicleActiv
 			vehicle_activities.model
         `).
 		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
-		Joins("LEFT JOIN users ON vehicle_activities.user_id = users.id").
 		Joins("LEFT JOIN access_exit_points AS entry_points ON vehicle_activities.entry_point_id = entry_points.id").
 		Joins("LEFT JOIN access_exit_points AS exit_points ON vehicle_activities.exit_point_id = exit_points.id").
-		Joins("LEFT JOIN users AS registered_by_users ON vehicle_activities.registered_by = registered_by_users.id").
 		Where("vehicle_activities.vehicle_id = ?", vehicle_id).
 		Order("vehicle_activities.timestamp desc")
 
@@ -322,10 +321,8 @@ func GetGuestVehicleActivitiesByPlateNumber(db *gorm.DB, plateNumber string) ([]
 			vehicle_activities.timestamp
 		`).
 		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
-		Joins("LEFT JOIN users ON vehicle_activities.user_id = users.id").
 		Joins("LEFT JOIN access_exit_points AS entry_points ON vehicle_activities.entry_point_id = entry_points.id").
 		Joins("LEFT JOIN access_exit_points AS exit_points ON vehicle_activities.exit_point_id = exit_points.id").
-		Joins("LEFT JOIN users AS registered_by_users ON vehicle_activities.registered_by = registered_by_users.id").
 		Where("vehicle_activities.plate_number = ? AND vehicle_activities.visitor_type = ?", plateNumber, models.VisitorTypeGuest).
 		Order("vehicle_activities.timestamp desc")
 
@@ -388,10 +385,8 @@ func GetAllVehicleActivities(from, to time.Time, visitorType *models.VisitorType
 	var activities []models.VehicleActivity
 
 	query := db.Preload("Vehicle").
-		Preload("User").
 		Preload("EntryPoint").
 		Preload("ExitPoint").
-		Preload("RegisteredByUser").
 		Where("timestamp BETWEEN ? AND ?", from, to)
 
 	if visitorType != nil {
@@ -529,7 +524,242 @@ func GenerateActivitySummary(activities []models.VehicleActivityResponse) map[st
 	return summary
 }
 
-func FetchVehiclesLogs(db *gorm.DB, query string) (models.Vehicle, int, error) {
+func LogGuestVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput) (int, error) {
+	activity := models.GuestVehicleActivity{
+		PlateNumber: req.PlateNumber,
+		IsEntry:     req.IsEntry,
+		Timestamp:   time.Now(),
+	}
 
-	return
+	// Validate entry/exit points
+	if (req.EntryPointID != "" && req.ExitPointID != "") || (req.EntryPointID == "" && req.ExitPointID == "") {
+		return http.StatusBadRequest, fmt.Errorf("either entry point or exit point must be provided, not both or neither")
+	}
+
+	if req.IsEntry {
+		if req.EntryPointID == "" {
+			return http.StatusBadRequest, fmt.Errorf("entry point ID is required for entry activity")
+		}
+	} else {
+		if req.ExitPointID == "" {
+			return http.StatusBadRequest, fmt.Errorf("exit point ID is required for exit activity")
+		}
+	}
+
+	if req.EntryPointID != "" {
+		exist := models.CheckExists(db, &models.AccessExitPoint{}, "id = ?", req.EntryPointID)
+		if !exist {
+			return http.StatusNotFound, fmt.Errorf("entry point with ID %s not found", req.EntryPointID)
+		}
+		activity.EntryPointID = &req.EntryPointID
+	}
+	if req.ExitPointID != "" {
+		exist := models.CheckExists(db, &models.AccessExitPoint{}, "id = ?", req.ExitPointID)
+		if !exist {
+			return http.StatusNotFound, fmt.Errorf("exit point with ID %s not found", req.ExitPointID)
+		}
+		activity.ExitPointID = &req.ExitPointID
+	}
+
+	// Validate guest vehicle entry/exit sequence
+	// if err := validateGuestEntryExit(db, req.PlateNumber, req.IsEntry); err != nil {
+	// 	return http.StatusBadRequest, err
+	// }
+
+	if err := db.Create(&activity).Error; err != nil {
+		return http.StatusBadRequest, fmt.Errorf("failed to create guest activity log: %v", err)
+	}
+
+	return http.StatusOK, nil
+}
+
+func FetchRegisteredVehiclesLogs(db *gorm.DB, pagination models.Pagination, filters models.VehicleFilters) (*models.PaginatedVehicleResponse, int, error) {
+	var vehicles []models.Vehicle
+	var count int64
+
+	query := db.Model(&models.Vehicle{})
+
+	if filters.PlateNumber != "" {
+		query = query.Where("plate_number ILIKE ?", "%"+filters.PlateNumber+"%")
+	}
+	if filters.Model != "" {
+		query = query.Where("model ILIKE ?", "%"+filters.Model+"%")
+	}
+	if filters.Color != "" {
+		query = query.Where("color ILIKE ?", "%"+filters.Color+"%")
+	}
+	if filters.Type != "" {
+		query = query.Where("type = ?", filters.Type)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to count vehicles: %v", err)
+	}
+
+	offset := (pagination.Page - 1) * pagination.Limit
+	totalPages := int(math.Ceil(float64(count) / float64(pagination.Limit)))
+
+	if err := query.Offset(offset).Limit(pagination.Limit).Order("created_at desc").Find(&vehicles).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to fetch vehicles: %v", err)
+	}
+
+	paginationResponse := models.PaginationResponse{
+		CurrentPage:     pagination.Page,
+		PageCount:       len(vehicles),
+		TotalPagesCount: totalPages,
+	}
+
+	response := &models.PaginatedVehicleResponse{
+		Data:       vehicles,
+		Pagination: paginationResponse,
+	}
+
+	return response, http.StatusOK, nil
+}
+
+func FetchGuestVehiclesLogs(db *gorm.DB, pagination models.Pagination, plateNumber string) (*models.PaginatedVehicleResponse, int, error) {
+	var activities []models.GuestVehicleActivity
+	var count int64
+
+	query := db.Model(&models.GuestVehicleActivity{})
+
+	if plateNumber != "" {
+		query = query.Where("plate_number ILIKE ?", "%"+plateNumber+"%")
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to count guest activities: %v", err)
+	}
+
+	offset := (pagination.Page - 1) * pagination.Limit
+	totalPages := int(math.Ceil(float64(count) / float64(pagination.Limit)))
+
+	if err := db.Model(&models.GuestVehicleActivity{}).
+		Scopes(func(d *gorm.DB) *gorm.DB {
+			if plateNumber != "" {
+				return d.Where("plate_number ILIKE ?", "%"+plateNumber+"%")
+			}
+			return d
+		}).
+		Offset(offset).
+		Limit(pagination.Limit).
+		Order("timestamp desc").
+		Find(&activities).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to fetch guest activities: %v", err)
+	}
+
+	paginationResponse := models.PaginationResponse{
+		CurrentPage:     pagination.Page,
+		PageCount:       len(activities),
+		TotalPagesCount: totalPages,
+	}
+
+	response := &models.PaginatedVehicleResponse{
+		Data:       activities,
+		Pagination: paginationResponse,
+	}
+
+	return response, http.StatusOK, nil
+}
+
+func GetVehicleOwnerProfile(db *gorm.DB, vehicleID string) (*models.VehicleOwnerProfileResponse, int, error) {
+	var vehicle models.Vehicle
+	var user models.User
+	var profile models.Profile
+
+	if err := db.Where("id = ?", vehicleID).First(&vehicle).Error; err != nil {
+		return nil, http.StatusNotFound, fmt.Errorf("vehicle not found: %v", err)
+	}
+
+	if err := db.Where("id = ?", vehicle.UserID).First(&user).Error; err != nil {
+		return nil, http.StatusNotFound, fmt.Errorf("vehicle owner not found: %v", err)
+	}
+
+	if err := db.Where("user_id = ?", user.ID).First(&profile).Error; err != nil {
+		profile = models.Profile{
+			FullName: user.Name,
+		}
+	}
+
+	activities, _, err := GetVehicleActivities(db, vehicleID)
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to get vehicle activities: %v", err)
+	}
+
+	ownerInfo := models.VehicleOwnerInfo{
+		ID:       user.ID,
+		Name:     user.Name,
+		Email:    user.Email,
+		Phone:    profile.Phone,
+		UserName: profile.UserName,
+		FullName: profile.FullName,
+	}
+
+	response := &models.VehicleOwnerProfileResponse{
+		Vehicle:    vehicle,
+		Owner:      ownerInfo,
+		Activities: activities,
+	}
+
+	return response, http.StatusOK, nil
+}
+
+func GenerateActivityReport(db *gorm.DB, from, to time.Time, visitorType *models.VisitorType, pagination models.Pagination) (*models.ActivityReportResponse, int, error) {
+	var activities []models.VehicleActivity
+	var count int64
+
+	query := db.Model(&models.VehicleActivity{}).Where("timestamp BETWEEN ? AND ?", from, to)
+
+	if visitorType != nil {
+		query = query.Where("visitor_type = ?", *visitorType)
+	}
+
+	if err := query.Count(&count).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to count activities: %v", err)
+	}
+
+	offset := (pagination.Page - 1) * pagination.Limit
+	totalPages := int(math.Ceil(float64(count) / float64(pagination.Limit)))
+
+	if err := query.
+		Offset(offset).
+		Limit(pagination.Limit).
+		Order("timestamp desc").
+		Find(&activities).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to fetch activities: %v", err)
+	}
+
+	activityResponses := make([]models.VehicleActivityResponse, len(activities))
+	for i, activity := range activities {
+		activityResponses[i] = convertToActivityResponse(activity)
+	}
+
+	allActivities, err := GetAllVehicleActivities(from, to, visitorType)
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to get all activities for summary: %v", err)
+	}
+
+	summary := GenerateActivitySummary(allActivities)
+
+	paginationResponse := models.PaginationResponse{
+		CurrentPage:     pagination.Page,
+		PageCount:       len(activityResponses),
+		TotalPagesCount: totalPages,
+	}
+
+	reportData := models.ActivityReportData{
+		Activities: activityResponses,
+		Summary:    summary,
+		DateRange: map[string]string{
+			"from": from.Format("2006-01-02"),
+			"to":   to.Format("2006-01-02"),
+		},
+	}
+
+	response := &models.ActivityReportResponse{
+		Data:       reportData,
+		Pagination: paginationResponse,
+	}
+
+	return response, http.StatusOK, nil
 }
