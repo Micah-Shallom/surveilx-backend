@@ -17,10 +17,4 @@ func UserProfileRoutes(r *gin.Engine, api_version string) {
 		profileRoutes.GET("/", controllers.GetUserProfile)
 	}
 
-	// Admin routes for user management
-	// adminUsers := r.Group("/admin/users")
-	// adminUsers.Use(middleware.AuthMiddleware())
-	// {
-	// 	adminUsers.GET("/:id", controllers.GetUserByIDAdmin)
-	// }
 }

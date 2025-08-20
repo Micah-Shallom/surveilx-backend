@@ -15,7 +15,7 @@ type User struct {
     Role      string         `json:"role" gorm:"column:role;default:'user'"`
     Token     string         `json:"token,omitempty" gorm:"column:token"`
     CreatedAt time.Time      `json:"createdAt" gorm:"column:created_at"`
-    DeletedAt gorm.DeletedAt `gorm:"index" json:"deletedAt" gorm:"column:deleted_at"`
+    DeletedAt gorm.DeletedAt `json:"deletedAt" gorm:"column:deleted_at"`
 }
 
 func (user *User) BeforeCreate(tx *gorm.DB) (err error) {

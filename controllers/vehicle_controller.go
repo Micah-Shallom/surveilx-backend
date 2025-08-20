@@ -8,7 +8,6 @@ import (
 	"survielx-backend/models"
 	"survielx-backend/services"
 	"survielx-backend/utility"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -218,7 +217,7 @@ func GetGuestVehicleActivitiesByPlateNumber(c *gin.Context) {
 func IdentifyVehicle(c *gin.Context) {
 	plateNumber := c.Param("plateNumber")
 
-	status, code, err := services.IdentifyVehicle(plateNumber)
+	resp, code, err := services.IdentifyVehicle(plateNumber)
 	if err != nil {
 		log.Default().Println("Error getting vehicle status:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle status", err.Error(), nil)
@@ -226,9 +225,10 @@ func IdentifyVehicle(c *gin.Context) {
 		return
 	}
 
-	data := map[string]any{
-		"plate_number": plateNumber,
-		"status":       status,
+	data := models.VehicleIdentity{
+		PlateNumber:  plateNumber,
+		Status:       resp.Status,
+		IsRegistered: resp.IsRegistered,
 	}
 
 	log.Default().Println("Vehicle status retrieved successfully for plate number:", plateNumber)
@@ -270,66 +270,19 @@ func GetVehicleLogHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, rd)
 }
 
-// GetActivityReport returns activity report for a date range
-func GetActivityReport(c *gin.Context) {
-	fromStr := c.Query("from")
-	toStr := c.Query("to")
-	visitorTypeStr := c.Query("visitor_type") // optional filter
+func FetchVehiclesLogs(c *gin.Context) {
+	query := c.Query("user_type")
 
-	if fromStr == "" || toStr == "" {
-		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Missing date parameters", "Both 'from' and 'to' query parameters are required", nil)
-		c.JSON(http.StatusBadRequest, rd)
-		return
-	}
-
-	from, err := time.Parse(time.RFC3339, fromStr)
+	response, statusCode, err := services.FetchAllVehicles(database.DB, query)
 	if err != nil {
-		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid 'from' date format", "Use RFC3339 format (e.g., 2024-01-01T00:00:00Z)", nil)
-		c.JSON(http.StatusBadRequest, rd)
+		log.Default().Println("Failed to fetch vehicles")
+		rd := utility.BuildErrorResponse(statusCode, "error", "failed to fetch vehicles", err.Error())
+		c.JSON(statusCode, rd)
 		return
 	}
 
-	to, err := time.Parse(time.RFC3339, toStr)
-	if err != nil {
-		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid 'to' date format", "Use RFC3339 format (e.g., 2024-01-01T23:59:59Z)", nil)
-		c.JSON(http.StatusBadRequest, rd)
-		return
-	}
-
-	var visitorType *models.VisitorType
-	if visitorTypeStr != "" {
-		vt := models.VisitorType(visitorTypeStr)
-		if vt == models.VisitorTypeRegistered || vt == models.VisitorTypeGuest {
-			visitorType = &vt
-		} else {
-			rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid visitor type", "visitor_type must be 'registered' or 'guest'", nil)
-			c.JSON(http.StatusBadRequest, rd)
-			return
-		}
-	}
-
-	activities, err := services.GetAllVehicleActivities(from, to, visitorType)
-	if err != nil {
-		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Failed to get activity report", err.Error(), nil)
-		c.JSON(http.StatusBadRequest, rd)
-		return
-	}
-
-	// Generate summary statistics
-	summary := services.GenerateActivitySummary(activities)
-
-	data := map[string]any{
-		"activities": activities,
-		"summary":    summary,
-		"period": map[string]any{
-			"from": from,
-			"to":   to,
-		},
-		"filters": map[string]any{
-			"visitor_type": visitorTypeStr,
-		},
-	}
-
-	rd := utility.BuildSuccessResponse(http.StatusOK, "Activity report retrieved successfully", data)
-	c.JSON(http.StatusOK, rd)
+	log.Default().Println("Successfully fetched vehicles")
+	rd := utility.BuildSuccessResponse(statusCode, "success", "successfully fetch vehicles", response)
+	c.JSON(statusCode, rd)
 }
+

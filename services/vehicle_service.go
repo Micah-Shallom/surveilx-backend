@@ -25,7 +25,6 @@ func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
 
 	var fullVehicle models.Vehicle
 	if err := db.
-		Preload("User").
 		First(&fullVehicle, "id = ?", vehicle.ID).Error; err != nil {
 		return nil, http.StatusBadRequest, err
 	}
@@ -81,7 +80,6 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 		}
 	}
 
-	// Handle entry/exit points
 	if req.EntryPointID != "" {
 		exist := models.CheckExists(db, &models.AccessExitPoint{}, "id = ?", req.EntryPointID)
 		if !exist {
@@ -97,10 +95,8 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 		activity.ExitPointID = &req.ExitPointID
 	}
 
-	// Handle based on visitor type
 	switch req.VisitorType {
 	case models.VisitorTypeRegistered:
-		// Get registered vehicle
 		vehicle, _, err := GetVehicleByPlateNumber(req.PlateNumber)
 		if err != nil {
 			return nil, http.StatusNotFound, fmt.Errorf("registered vehicle not found: %v", err)
@@ -109,28 +105,33 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput, loggedB
 		activity.VehicleID = &vehicle.ID
 		activity.UserID = &vehicle.UserID
 		activity.VehicleType = vehicle.Type
+		activity.Model = vehicle.Model
 
-		// Validate entry/exit logic for registered vehicles
 		if err := validateVehicleEntryExit(db, vehicle.ID, req.IsEntry); err != nil {
 			return nil, http.StatusBadRequest, err
 		}
 
 	case models.VisitorTypeGuest:
-		// For guests, record who logged them
 		activity.RegisteredBy = loggedByUserID
 
-		// Optional: Validate guest entry/exit logic if needed
+		vehicle, _, err := GetVehicleByPlateNumber(req.PlateNumber)
+		if err == nil {
+			activity.VehicleID = &vehicle.ID
+			activity.UserID = &vehicle.UserID
+			activity.VehicleType = vehicle.Type
+			activity.Model = vehicle.Model
+			activity.VisitorType = models.VisitorTypeGuest
+		}
+
 		if err := validateGuestEntryExit(db, req.PlateNumber, req.IsEntry); err != nil {
 			return nil, http.StatusBadRequest, err
 		}
 	}
 
-	// Create the activity record
 	if err := db.Create(&activity).Error; err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("failed to create activity log: %v", err)
 	}
 
-	// Return with preloaded relationships
 	return getVehicleActivityResponse(db, activity.ID)
 }
 
@@ -138,7 +139,6 @@ func getVehicleActivityResponse(db *gorm.DB, activityID string) (*models.Vehicle
 	var activity models.VehicleActivity
 
 	err := db.
-		Preload("User").
 		Preload("EntryPoint").
 		Preload("ExitPoint").
 		First(&activity, "id = ?", activityID).Error
@@ -196,18 +196,30 @@ func CreateVehicleLog(vehicle *models.Vehicle, req models.LogVehicleInput) (*mod
 	return &log, http.StatusCreated, nil
 }
 
-func IdentifyVehicle(plateNumber string) (string, int, error) {
+// the model backend calls this to find out if the vehicle exists either as a registered user or guest user
+func IdentifyVehicle(plateNumber string) (models.VehicleIdentity, int, error) {
 	vehicle, statuscode, err := GetVehicleByPlateNumber(plateNumber)
 	if err != nil {
-		return "", statuscode, err
+		// if not record found...security personnel should log this vehicle entry as a guest entry
+		return models.VehicleIdentity{}, statuscode, err
 	}
 
 	return GetVehicleStatus(vehicle.ID)
 }
 
-func GetVehicleStatus(vehicleID string) (string, int, error) {
+func GetVehicleStatus(vehicleID string) (models.VehicleIdentity, int, error) {
 	db := database.DB
-	var lastLog models.VehicleActivity
+	var (
+		lastLog         models.VehicleActivity
+		vehicle         models.Vehicle
+		vehicleIdentity models.VehicleIdentity
+	)
+
+	vehicleIdentity.Status = "outside"
+	exists := models.CheckExists(db, &vehicle, "id = ?", vehicleID)
+	if exists {
+		vehicleIdentity.IsRegistered = true
+	}
 
 	err := db.Where("vehicle_id = ?", vehicleID).
 		Order("timestamp desc").
@@ -215,15 +227,16 @@ func GetVehicleStatus(vehicleID string) (string, int, error) {
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return "outside", http.StatusNotFound, fmt.Errorf("no logs found for vehicle with ID %s", vehicleID)
+			return vehicleIdentity, http.StatusNotFound, fmt.Errorf("no logs found for vehicle")
 		}
-		return "", http.StatusBadRequest, fmt.Errorf("database error while checking vehicle logs: %v", err)
+		return vehicleIdentity, http.StatusBadRequest, fmt.Errorf("database error while checking vehicle logs: %v", err)
 	}
 
 	if lastLog.IsEntry {
-		return "inside", http.StatusOK, nil
+		vehicleIdentity.Status = "inside"
+		return vehicleIdentity, http.StatusOK, nil
 	}
-	return "outside", http.StatusOK, nil
+	return vehicleIdentity, http.StatusOK, nil
 }
 
 func GetVehicleLogHistory(vehicleID string, limit int) ([]models.VehicleActivity, error) {
@@ -301,6 +314,7 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string) ([]models.VehicleActiv
             vehicle_activities.is_entry,
             vehicle_activities.vehicle_type,
             vehicle_activities.timestamp,
+			vehicle_activities.model
         `).
 		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
 		Joins("LEFT JOIN users ON vehicle_activities.user_id = users.id").
@@ -358,6 +372,7 @@ func convertToActivityResponse(activity models.VehicleActivity) models.VehicleAc
 		IsEntry:     activity.IsEntry,
 		VehicleType: activity.VehicleType,
 		Timestamp:   activity.Timestamp,
+		Model:       activity.Model,
 	}
 }
 
@@ -535,4 +550,9 @@ func GenerateActivitySummary(activities []models.VehicleActivityResponse) map[st
 	}
 
 	return summary
+}
+
+func FetchVehiclesLogs(db *gorm.DB, query string) (models.Vehicle, int, error) {
+
+	return
 }
