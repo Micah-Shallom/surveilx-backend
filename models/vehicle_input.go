@@ -26,6 +26,7 @@ type VehicleOwnerProfileResponse struct {
 	Vehicle    Vehicle                   `json:"vehicle"`
 	Owner      VehicleOwnerInfo          `json:"owner"`
 	Activities []VehicleActivityResponse `json:"activities"`
+	Pagination PaginationResponse        `json:"pagination"`
 }
 
 type VehicleOwnerInfo struct {

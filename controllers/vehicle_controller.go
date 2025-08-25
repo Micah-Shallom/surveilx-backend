@@ -97,6 +97,7 @@ func LogVehicleActivity(c *gin.Context) {
 		return
 	}
 
+	input.VisitorType = models.VisitorTypeRegistered
 	code, err := services.LogVehicleActivity(database.DB, input)
 	if err != nil {
 		log.Default().Println("Error logging vehicle activity:", err)
@@ -170,7 +171,10 @@ func GetVehicleActivities(c *gin.Context) {
 		return
 	}
 
-	data, code, err := services.GetVehicleActivities(database.DB, vehicle_id)
+	pagination := models.GetPagination(c)
+
+
+	data, code, err := services.GetVehicleActivities(database.DB, vehicle_id, pagination)
 	if err != nil {
 		log.Default().Println("Error fetching vehicle activities:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle activities", err.Error(), nil)
@@ -193,7 +197,9 @@ func GetGuestVehicleActivitiesByPlateNumber(c *gin.Context) {
 		return
 	}
 
-	data, code, err := services.GetGuestVehicleActivitiesByPlateNumber(database.DB, plateNumber)
+	pagination := models.GetPagination(c)
+
+	data, code, err := services.GetGuestVehicleActivitiesByPlateNumber(database.DB, plateNumber, pagination)
 	if err != nil {
 		log.Default().Println("Error fetching guest vehicle activities:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to get guest vehicle activities", err.Error(), nil)
@@ -351,7 +357,16 @@ func GetVehicleOwnerProfile(c *gin.Context) {
 		return
 	}
 
-	data, code, err := services.GetVehicleOwnerProfile(database.DB, vehicleID)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+    limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+    
+    pagination := models.Pagination{
+        Page:  page,
+        Limit: limit,
+    }
+
+
+	data, code, err := services.GetVehicleOwnerProfile(database.DB, vehicleID, pagination)
 	if err != nil {
 		log.Default().Println("Error fetching vehicle owner profile:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle owner profile", err.Error(), nil)

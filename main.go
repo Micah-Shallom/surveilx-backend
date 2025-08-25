@@ -23,5 +23,5 @@ func main() {
 
 	r := routers.SetupRouter()
 
-	r.Run(fmt.Sprintf(":%s", os.Getenv("PORT"))) // Use PORT from .env file
+	r.Run(fmt.Sprintf(":%s", os.Getenv("PORT")))
 }

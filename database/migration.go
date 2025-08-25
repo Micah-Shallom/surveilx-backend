@@ -13,6 +13,7 @@ func MigrateDatabase() {
 		&models.Vehicle{},
 		&models.VehicleActivity{},
 		&models.GuestVehicleActivity{},
+		&models.PendingVehicleExit{},
 	)
 
 	if err != nil {

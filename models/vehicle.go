@@ -30,11 +30,6 @@ func (vehicle *Vehicle) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
-// func (vehicle *GuestVehicle) BeforeCreate(tx *gorm.DB) (err error) {
-// 	vehicle.ID = utility.GenerateUUID()
-// 	return
-// }
-
 type VisitorType string
 
 const (
@@ -68,18 +63,18 @@ type VehicleActivity struct {
 }
 
 type GuestVehicleActivity struct {
-	ID          string         `json:"id" gorm:"column:id;type:uuid;primaryKey;"`
-	PlateNumber string         `json:"plate_number" gorm:"column:plate_number;"`
+	ID          string `json:"id" gorm:"column:id;type:uuid;primaryKey;"`
+	PlateNumber string `json:"plate_number" gorm:"column:plate_number;"`
 
-	IsEntry     bool           `json:"is_entry" gorm:"column:is_entry"`
+	IsEntry      bool             `json:"is_entry" gorm:"column:is_entry"`
 	EntryPointID *string          `json:"entry_point_id,omitempty" gorm:"column:entry_point_id;type:uuid"`
 	ExitPointID  *string          `json:"exit_point_id,omitempty" gorm:"column:exit_point_id;type:uuid"`
 	EntryPoint   *AccessExitPoint `json:"entry_point,omitempty" gorm:"foreignKey:EntryPointID"`
 	ExitPoint    *AccessExitPoint `json:"exit_point,omitempty" gorm:"foreignKey:ExitPointID"`
 
-	Timestamp   time.Time      `json:"timestamp" gorm:"column:timestamp;not null;default:CURRENT_TIMESTAMP"`
-	CreatedAt   time.Time      `json:"createdAt" gorm:"column:created_at"`
-	DeletedAt   gorm.DeletedAt `json:"deletedAt" gorm:"column:deleted_at"`
+	Timestamp time.Time      `json:"timestamp" gorm:"column:timestamp;not null;default:CURRENT_TIMESTAMP"`
+	CreatedAt time.Time      `json:"createdAt" gorm:"column:created_at"`
+	DeletedAt gorm.DeletedAt `json:"deletedAt" gorm:"column:deleted_at"`
 }
 
 func (va *VehicleActivity) BeforeCreate(tx *gorm.DB) (err error) {

@@ -2,6 +2,7 @@ package routers
 
 import (
 	"net/http"
+	"survielx-backend/controllers"
 	"survielx-backend/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,8 @@ func SetupRouter() *gin.Engine {
 	AccessExitPointRoutes(r, ApiVersion)
 	UserProfileRoutes(r, ApiVersion)
 	HealthRoutes(r, ApiVersion)
+
+	r.GET("/ws", controllers.WSHandler)
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{

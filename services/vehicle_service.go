@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"survielx-backend/database"
 	"survielx-backend/models"
+	"survielx-backend/utility"
 	"time"
 
 	"gorm.io/gorm"
@@ -108,27 +109,66 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput) (int, e
 		return http.StatusBadRequest, err
 	}
 
-	if err := db.Create(&activity).Error; err != nil {
-		return http.StatusBadRequest, fmt.Errorf("failed to create activity log: %v", err)
+	if req.IsEntry {
+		return HandleEntryProcedures(db, activity)
 	}
 
-	return http.StatusOK, nil
+	return HandleExitProcedures(db, activity, vehicle)
 }
 
-func getVehicleActivityResponse(db *gorm.DB, activityID string) (*models.VehicleActivityResponse, int, error) {
-	var activity models.VehicleActivity
-
-	err := db.
-		Preload("EntryPoint").
-		Preload("ExitPoint").
-		First(&activity, "id = ?", activityID).Error
-
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("failed to get activity: %v", err)
+func HandleEntryProcedures(db *gorm.DB, activity models.VehicleActivity) (int, error) {
+	if err := db.Create(&activity).Error; err != nil {
+		fmt.Printf("failed to create vehicle activity log: %v\n", err)
+		return http.StatusBadRequest, err
 	}
 
-	response := convertToActivityResponse(activity)
-	return &response, http.StatusOK, nil
+	var pendingExit models.PendingVehicleExit
+	err := db.Where("plate_number = ? AND status = ?", activity.PlateNumber, "pending").First(&pendingExit).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		fmt.Printf("error checking pending exit requests: %v\n", err)
+		return http.StatusInternalServerError, err
+	}
+
+	if err == nil {
+		pendingExit.Status = "approved"
+		if err := db.Save(&pendingExit).Error; err != nil {
+			fmt.Printf("failed to update pending exit request: %v\n", err)
+			return http.StatusInternalServerError, err
+		}
+		fmt.Printf("pending exit request for vehicle %s approved upon entry\n", activity.PlateNumber)
+	}
+
+	// err = validateVehicleEntryExit(db, *activity.VehicleID, true)
+	// if err != nil {
+	// 	return http.StatusInternalServerError, err
+	// }
+
+	return http.StatusCreated, nil
+}
+
+func HandleExitProcedures(db *gorm.DB, activity models.VehicleActivity, vehicle *models.Vehicle) (int, error) {
+	responseToken := utility.GenerateUUID()
+	pending := models.PendingVehicleExit{
+		ID:            utility.GenerateUUID(),
+		PlateNumber:   activity.PlateNumber,
+		VehicleID:     *activity.VehicleID,
+		UserID:        vehicle.UserID,
+		ExitPointID:   *activity.ExitPointID,
+		Timestamp:     time.Now(),
+		Status:        "pending",
+		ResponseToken: responseToken,
+	}
+
+	if err := db.Create(&pending).Error; err != nil {
+		return http.StatusInternalServerError, fmt.Errorf("failed to create pending exit: %v", err)
+	}
+
+	//trigger notification to vehicle owner for exit approval
+	go notifyUserForExitConfirmation(pending.ID, vehicle.UserID, responseToken)
+
+	go handleExitTimeout(pending.ID, db, pending.ExitPointID)
+
+	return http.StatusAccepted, nil
 }
 
 func GetVehicleLogs(userId string) (*[]models.VehicleActivity, int, error) {
@@ -275,16 +315,26 @@ func GetUserVehicles(db *gorm.DB, userID string) ([]models.Vehicle, int, error) 
 	return vehicles, http.StatusOK, nil
 }
 
-func GetVehicleActivities(db *gorm.DB, vehicle_id string) ([]models.VehicleActivityResponse, int, error) {
-	responses := []models.VehicleActivityResponse{}
+func GetVehicleActivities(db *gorm.DB, vehicle_id string, pagination models.Pagination) (*models.PaginatedVehicleResponse, int, error) {
+	var responses []models.VehicleActivityResponse
+	var count int64
 
 	exists := models.CheckExists(db, &models.Vehicle{}, "id = ?", vehicle_id)
 	if !exists {
 		return nil, http.StatusNotFound, fmt.Errorf("vehicle with ID %s not found", vehicle_id)
 	}
 
-	query := db.
-		Model(&models.VehicleActivity{}).
+	query := db.Model(&models.VehicleActivity{}).
+		Where("vehicle_activities.vehicle_id = ?", vehicle_id)
+
+	if err := query.Count(&count).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to count vehicle activities: %v", err)
+	}
+
+	offset := (pagination.Page - 1) * pagination.Limit
+	totalPages := int(math.Ceil(float64(count) / float64(pagination.Limit)))
+
+	err := query.
 		Select(`
             vehicle_activities.id,
             vehicle_activities.plate_number,
@@ -292,41 +342,64 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string) ([]models.VehicleActiv
             vehicle_activities.is_entry,
             vehicle_activities.vehicle_type,
             vehicle_activities.timestamp,
-			vehicle_activities.model
+            vehicle_activities.model
         `).
 		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
 		Joins("LEFT JOIN access_exit_points AS entry_points ON vehicle_activities.entry_point_id = entry_points.id").
 		Joins("LEFT JOIN access_exit_points AS exit_points ON vehicle_activities.exit_point_id = exit_points.id").
-		Where("vehicle_activities.vehicle_id = ?", vehicle_id).
-		Order("vehicle_activities.timestamp desc")
+		Order("vehicle_activities.timestamp desc").
+		Offset(offset).
+		Limit(pagination.Limit).
+		Scan(&responses).Error
 
-	if err := query.Scan(&responses).Error; err != nil {
+	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("failed to get vehicle activities: %v", err)
 	}
 
-	return responses, http.StatusOK, nil
+	paginationResponse := models.PaginationResponse{
+		CurrentPage:     pagination.Page,
+		PageCount:       len(responses),
+		TotalPagesCount: totalPages,
+	}
+
+	return &models.PaginatedVehicleResponse{
+		Data:       responses,
+		Pagination: paginationResponse,
+	}, http.StatusOK, nil
 }
 
-func GetGuestVehicleActivitiesByPlateNumber(db *gorm.DB, plateNumber string) ([]models.VehicleActivityResponse, int, error) {
+func GetGuestVehicleActivitiesByPlateNumber(db *gorm.DB, plateNumber string, pagination models.Pagination) (*models.PaginatedVehicleResponse, int, error) {
 	var activities []models.VehicleActivity
+	var count int64
 
-	query := db.
-		Model(&models.VehicleActivity{}).
+	query := db.Model(&models.VehicleActivity{}).
+		Where("vehicle_activities.plate_number = ? AND vehicle_activities.visitor_type = ?", plateNumber, models.VisitorTypeGuest)
+
+	if err := query.Count(&count).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to count guest vehicle activities: %v", err)
+	}
+
+	offset := (pagination.Page - 1) * pagination.Limit
+	totalPages := int(math.Ceil(float64(count) / float64(pagination.Limit)))
+
+	err := query.
 		Select(`
-			vehicle_activities.id,
-			vehicle_activities.plate_number,
-			vehicle_activities.visitor_type,
-			vehicle_activities.is_entry,
-			vehicle_activities.vehicle_type,
-			vehicle_activities.timestamp
-		`).
+            vehicle_activities.id,
+            vehicle_activities.plate_number,
+            vehicle_activities.visitor_type,
+            vehicle_activities.is_entry,
+            vehicle_activities.vehicle_type,
+            vehicle_activities.timestamp
+        `).
 		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
 		Joins("LEFT JOIN access_exit_points AS entry_points ON vehicle_activities.entry_point_id = entry_points.id").
 		Joins("LEFT JOIN access_exit_points AS exit_points ON vehicle_activities.exit_point_id = exit_points.id").
-		Where("vehicle_activities.plate_number = ? AND vehicle_activities.visitor_type = ?", plateNumber, models.VisitorTypeGuest).
-		Order("vehicle_activities.timestamp desc")
+		Order("vehicle_activities.timestamp desc").
+		Offset(offset).
+		Limit(pagination.Limit).
+		Find(&activities).Error
 
-	if err := query.Find(&activities).Error; err != nil {
+	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("failed to get guest vehicle activities: %v", err)
 	}
 
@@ -335,7 +408,17 @@ func GetGuestVehicleActivitiesByPlateNumber(db *gorm.DB, plateNumber string) ([]
 		responses[i] = convertToActivityResponse(activity)
 	}
 
-	return responses, http.StatusOK, nil
+	paginationResponse := models.PaginationResponse{
+		CurrentPage:     pagination.Page,
+		PageCount:       len(responses),
+		TotalPagesCount: totalPages,
+	}
+
+	return &models.PaginatedVehicleResponse{
+		Data:       responses,
+		Pagination: paginationResponse,
+	}, http.StatusOK, nil
+
 }
 
 func convertToActivityResponse(activity models.VehicleActivity) models.VehicleActivityResponse {
@@ -662,7 +745,7 @@ func FetchGuestVehiclesLogs(db *gorm.DB, pagination models.Pagination, plateNumb
 	return response, http.StatusOK, nil
 }
 
-func GetVehicleOwnerProfile(db *gorm.DB, vehicleID string) (*models.VehicleOwnerProfileResponse, int, error) {
+func GetVehicleOwnerProfile(db *gorm.DB, vehicleID string, pagination models.Pagination) (*models.VehicleOwnerProfileResponse, int, error) {
 	var vehicle models.Vehicle
 	var user models.User
 	var profile models.Profile
@@ -681,9 +764,9 @@ func GetVehicleOwnerProfile(db *gorm.DB, vehicleID string) (*models.VehicleOwner
 		}
 	}
 
-	activities, _, err := GetVehicleActivities(db, vehicleID)
+	paginatedActivities, statusCode, err := GetVehicleActivities(db, vehicleID, pagination)
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("failed to get vehicle activities: %v", err)
+		return nil, statusCode, fmt.Errorf("failed to get vehicle activities: %v", err)
 	}
 
 	ownerInfo := models.VehicleOwnerInfo{
@@ -695,10 +778,12 @@ func GetVehicleOwnerProfile(db *gorm.DB, vehicleID string) (*models.VehicleOwner
 		FullName: profile.FullName,
 	}
 
+	activities, _ := paginatedActivities.Data.([]models.VehicleActivityResponse)
 	response := &models.VehicleOwnerProfileResponse{
 		Vehicle:    vehicle,
 		Owner:      ownerInfo,
 		Activities: activities,
+		Pagination: paginatedActivities.Pagination,
 	}
 
 	return response, http.StatusOK, nil
