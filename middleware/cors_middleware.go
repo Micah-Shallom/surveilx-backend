@@ -29,13 +29,12 @@ func CORSMiddleware() gin.HandlerFunc {
         allowedOrigins := []string{
             "http://localhost:3000",
             "https://abunrfedusec.com",
-            "*",
+            "https://www.abunrfedusec.com",
         }
 
         for _, o := range allowedOrigins {
             if o == origin {
-                c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-                // c.Writer.Header().Set("Vary", "Origin") // important for caching
+                c.Writer.Header().Add("Access-Control-Allow-Origin", origin)
                 break
             }
         }
