@@ -7,6 +7,11 @@ type RegisterVehicleInput struct {
 	Type        string `json:"type" validate:"required,oneof=bus bike car"`
 }
 
+type UpdateVehicleInput struct {
+	Model string `json:"model,omitempty"`
+	Color string `json:"color,omitempty"`
+}
+
 type LogVehicleInput struct {
 	PlateNumber  string `json:"plate_number" validate:"required"`
 	IsEntry      bool   `json:"is_entry"`

@@ -15,6 +15,10 @@ import (
 )
 
 func notifyUserForExitConfirmation(pendingID, userID, token string) {
+	var (
+		 pending models.PendingVehicleExit
+		 vehicle models.Vehicle
+	)
 	connInterface, ok := connections.Clients.Load(userID)
 	if !ok {
 		log.Println("User not connected:", userID)
@@ -22,11 +26,25 @@ func notifyUserForExitConfirmation(pendingID, userID, token string) {
 	}
 	conn := connInterface.(*websocket.Conn)
 
+	tx := database.DB.Where("id = ?", pendingID).First(&pending)
+	if tx.Error != nil{
+		log.Default().Println("unable to fetch pending vehicle information", tx.Error.Error())
+		return
+	}
+
+	tx = database.DB.Where("plate_number = ?", pending.PlateNumber).First(&vehicle)
+	if tx.Error != nil {
+		log.Default().Println("unable to fetch vehicle information", tx.Error.Error())
+		return
+	}
+
 	msg := map[string]any{
 		"type":       "exit_confirmation",
 		"message":    "Are you the one leaving the premises?",
 		"pending_id": pendingID,
 		"token":      token,
+		"plateNumber": pending.PlateNumber,
+		"vehicleName": vehicle.Model,
 	}
 	if err := conn.WriteJSON(msg); err != nil {
 		log.Println("WS write error:", err)
@@ -71,13 +89,13 @@ func HandleUserResponse(userID string, rawMessage []byte) {
 }
 
 func handleExitTimeout(pendingID string, db *gorm.DB, exitPointID string) {
-	time.Sleep(5 * time.Minute)
+	time.Sleep(20 * time.Second)
 	var pending models.PendingVehicleExit
 	err := db.Where("id = ?", pendingID).First(&pending).Error
 	if err == nil && pending.Status == "pending" {
 		pending.Status = "timed_out"
 		db.Save(&pending)
-		notifySecurity(pending.PlateNumber, pending.Timestamp, exitPointID) // Treat as suspicious
+		notifySecurity(pending.PlateNumber, pending.Timestamp, exitPointID)
 	}
 }
 

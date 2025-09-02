@@ -34,6 +34,26 @@ func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
 	return &fullVehicle, http.StatusCreated, nil
 }
 
+func UpdateVehicle(db *gorm.DB, vehicle_id string, input models.UpdateVehicleInput) (*models.Vehicle, int, error) {
+	var vehicle models.Vehicle
+
+	exists := models.CheckExists(db, &vehicle, "id = ?", vehicle_id)
+	if !exists{
+		return nil, http.StatusNotFound, errors.New("vehicle does not exist")
+	}
+
+	tx := db.Model(&vehicle).Updates(input)
+	if tx.Error != nil {
+		return nil, http.StatusNotFound, tx.Error
+	}
+
+	if tx.RowsAffected == 0 {
+		return nil, http.StatusBadRequest, errors.New("no changes made to the vehicle")
+	}
+
+	return &vehicle, http.StatusOK, nil
+}
+
 func DeRegisterVehicle(db *gorm.DB, vehicle_id string) (int, error) {
 	var vehicle models.Vehicle
 
@@ -342,6 +362,67 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string, pagination models.Pagi
             vehicle_activities.is_entry,
             vehicle_activities.vehicle_type,
             vehicle_activities.timestamp,
+			CASE 
+				WHEN vehicle_activities.is_entry = true THEN entry_points.name
+				ELSE exit_points.name
+			END AS gate_name,
+            vehicle_activities.model
+        `).
+		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").
+		Joins("LEFT JOIN access_exit_points AS entry_points ON vehicle_activities.entry_point_id = entry_points.id").
+		Joins("LEFT JOIN access_exit_points AS exit_points ON vehicle_activities.exit_point_id = exit_points.id").
+		Order("vehicle_activities.timestamp desc").
+		Offset(offset).
+		Limit(pagination.Limit).
+		Scan(&responses).Error
+
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to get vehicle activities: %v", err)
+	}
+
+	paginationResponse := models.PaginationResponse{
+		CurrentPage:     pagination.Page,
+		PageCount:       len(responses),
+		TotalPagesCount: totalPages,
+	}
+
+	return &models.PaginatedVehicleResponse{
+		Data:       responses,
+		Pagination: paginationResponse,
+	}, http.StatusOK, nil
+}
+
+
+func GetVehiclesActivities(db *gorm.DB, userID string, pagination models.Pagination) (*models.PaginatedVehicleResponse, int, error) {
+	var responses []models.VehicleActivityResponse
+	var count int64
+
+	exists := models.CheckExists(db, &models.User{}, "id = ?", userID)
+	if !exists {
+		return nil, http.StatusNotFound, fmt.Errorf("user with ID %s not found", userID)
+	}
+
+	query := db.Model(&models.VehicleActivity{})
+
+	if err := query.Count(&count).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to count vehicle activities: %v", err)
+	}
+
+	offset := (pagination.Page - 1) * pagination.Limit
+	totalPages := int(math.Ceil(float64(count) / float64(pagination.Limit)))
+
+	err := query.
+		Select(`
+            vehicle_activities.id,
+            vehicle_activities.plate_number,
+            vehicle_activities.visitor_type,
+            vehicle_activities.is_entry,
+            vehicle_activities.vehicle_type,
+            vehicle_activities.timestamp,
+			CASE 
+				WHEN vehicle_activities.is_entry = true THEN entry_points.name
+				ELSE exit_points.name
+			END AS gate_name,
             vehicle_activities.model
         `).
 		Joins("LEFT JOIN vehicles ON vehicle_activities.vehicle_id = vehicles.id").

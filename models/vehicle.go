@@ -55,6 +55,7 @@ type VehicleActivity struct {
 	ExitPointID  *string          `json:"exit_point_id,omitempty" gorm:"column:exit_point_id;type:uuid"`
 	EntryPoint   *AccessExitPoint `json:"entry_point,omitempty" gorm:"foreignKey:EntryPointID"`
 	ExitPoint    *AccessExitPoint `json:"exit_point,omitempty" gorm:"foreignKey:ExitPointID"`
+	GateName     string           `json:"gate_name,omitempty" gorm:"column:gate_name"`
 
 	Timestamp time.Time      `json:"timestamp" gorm:"column:timestamp;not null;default:CURRENT_TIMESTAMP"`
 	CreatedAt time.Time      `json:"created_at" gorm:"column:created_at"`
@@ -108,6 +109,7 @@ type VehicleActivityResponse struct {
 	IsEntry     bool        `json:"is_entry"`
 	VehicleType string      `json:"vehicle_type,omitempty"`
 	Model       string      `json:"model,omitempty"`
+	GateName    string      `json:"gate_name,omitempty"`
 	Timestamp   time.Time   `json:"timestamp"`
 }
 

@@ -50,6 +50,43 @@ func RegisterVehicle(c *gin.Context) {
 	c.JSON(code, rd)
 }
 
+func UpdateVehicle(c *gin.Context) {
+	vehicle_id := c.Param("vehicle_id")
+	var input models.UpdateVehicleInput 
+	if err := c.ShouldBindJSON(&input); err != nil {
+		log.Default().Println("Error binding JSON:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	if err := validate.Struct(input); err != nil {
+		log.Default().Println("Validation error:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	if err := utility.ValidateUUID(vehicle_id); err != nil {
+		log.Default().Println("invalid vehicle ID:", err)
+		rd:= utility.BuildErrorResponse(http.StatusBadRequest, "error", "invalid vehicle id", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	updatedVehicle, code, err := services.UpdateVehicle(database.DB, vehicle_id, input)
+	if err != nil {
+		log.Default().Println("Error updating user vehicles:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to update user vehicles", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	log.Default().Println("User vehicle updated successfully")
+	rd := utility.BuildSuccessResponse(code, "User vehicle updated successfully", updatedVehicle)
+	c.JSON(code, rd)
+}
+
 func DeRegisterVehicle(c *gin.Context) {
 	vehicle_id := c.Param("vehicle_id")
 
@@ -173,7 +210,6 @@ func GetVehicleActivities(c *gin.Context) {
 
 	pagination := models.GetPagination(c)
 
-
 	data, code, err := services.GetVehicleActivities(database.DB, vehicle_id, pagination)
 	if err != nil {
 		log.Default().Println("Error fetching vehicle activities:", err)
@@ -184,6 +220,25 @@ func GetVehicleActivities(c *gin.Context) {
 
 	log.Default().Println("User vehicle activities retrieved successfully")
 	rd := utility.BuildSuccessResponse(http.StatusOK, "User vehicle activities retrieved successfully", data)
+	c.JSON(http.StatusOK, rd)
+}
+
+func GetVehiclesActivities(c *gin.Context) {
+
+	userID := c.MustGet("user_id").(string)
+
+	pagination := models.GetPagination(c)
+
+	data, code, err := services.GetVehiclesActivities(database.DB, userID, pagination)
+	if err != nil {
+		log.Default().Println("Error fetching vehicles activities:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicles activities", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	log.Default().Println("User vehicles activities retrieved successfully")
+	rd := utility.BuildSuccessResponse(http.StatusOK, "User vehicles activities retrieved successfully", data)
 	c.JSON(http.StatusOK, rd)
 }
 
