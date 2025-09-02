@@ -1,0 +1,72 @@
+name: Render Keepalive
+
+on:
+  schedule:
+    # Runs every 10 minutes (GitHub cron is UTC)
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {} # allow manual run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      URLS: ${{ secrets.KEEPALIVE_URLS }}
+      USER_AGENT: "keepalive-bot/1.0 (+github-actions)"
+      MAX_RETRIES: "3"
+      REQUEST_TIMEOUT: "15" # seconds per request
+    
+    steps:
+      - name: Validate configuration
+        run: |
+          if [ -z "${URLS}" ]; then
+            echo "::error ::No URLs found. Configure KEEPALIVE_URLS secret (comma-separated)."
+            exit 1
+          fi
+      
+      - name: Ping Render services
+        shell: bash
+        run: |
+          IFS=',' read -ra ADDR <<< "${URLS}"
+          fail_count=0
+          
+          for raw in "${ADDR[@]}"; do
+            url="$(echo "$raw" | xargs)" # trim spaces
+            [ -z "$url" ] && continue
+            
+            echo "==> Pinging: $url"
+            success=0
+            
+            for i in $(seq 1 ${MAX_RETRIES}); do
+              code=$(curl -sS -o /dev/null -w "%{http_code}" \
+                --max-time "${REQUEST_TIMEOUT}" \
+                -A "${USER_AGENT}" \
+                "$url" || echo "000")
+              
+              if [[ "$code" =~ ^2|3 ]]; then
+                echo "✅ Success ($code) on attempt $i for $url"
+                success=1
+                break
+              else
+                echo "⚠️ Attempt $i failed for $url (HTTP $code)"
+                sleep 5
+              fi
+            done
+            
+            if [ "$success" -ne 1 ]; then
+              echo "::warning ::$url failed after ${MAX_RETRIES} attempts."
+              fail_count=$((fail_count+1))
+            fi
+          done
+          
+          if [ "$fail_count" -gt 0 ]; then
+            echo "::warning ::$fail_count URL(s) failed."
+            # exit 1
+          fi
