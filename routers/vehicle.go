@@ -19,6 +19,7 @@ func VehicleActivityRoutes(r *gin.Engine, api_version string) {
 		activityRoutes.GET("/fetch_vehicles", controllers.GetUserVehicles)
 		activityRoutes.GET("/activities", controllers.GetVehiclesActivities)
 		activityRoutes.GET("/pending", controllers.GetPendingVehicles)
+		activityRoutes.PUT("/pending/:pending_id", controllers.GetPendingVehicles)
 		activityRoutes.GET("/:vehicle_id/activities", controllers.GetVehicleActivities)
 	}
 

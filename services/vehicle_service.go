@@ -985,3 +985,27 @@ func GetPendingVehicles(db *gorm.DB, userID string, pagination models.Pagination
 		Pagination: paginationResponse,
 	}, http.StatusOK, nil
 }
+
+func UpdatePendingVehicle(db *gorm.DB, req models.PendingUpdateReq) (int, error) {
+	var pendEntry models.PendingVehicleExit
+
+	// Ensure the user exists
+	exists := models.CheckExists(db, &pendEntry, "id = ?", req.ID)
+	if !exists {
+		return http.StatusNotFound, fmt.Errorf("pending entry with ID %s not found", req.ID)
+	}
+
+	pendEntry.Status = req.Status
+
+	err := db.Save(pendEntry).Error
+
+	if req.Status != "confirmed" {
+		notifySecurity(pendEntry.PlateNumber, pendEntry.Timestamp, pendEntry.ExitPointID)
+	}
+
+	if err != nil {
+		return http.StatusInternalServerError, errors.New("Failed to update pending entry")
+	}
+
+	return http.StatusOK, nil
+}

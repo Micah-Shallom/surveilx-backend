@@ -262,6 +262,51 @@ func GetPendingVehicles(c *gin.Context) {
 	c.JSON(http.StatusOK, rd)
 }
 
+func UpdatePendingVehicle(c *gin.Context) {
+
+	pending_id := c.Param("pending_id")
+
+	var req models.PendingUpdateReq
+
+	err := utility.ValidateUUID(pending_id)
+	if err != nil {
+		log.Default().Println("Invalid pending ID:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid pending ID", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Default().Println("Error binding JSON:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid req", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	if err := validate.Struct(req); err != nil {
+		log.Default().Println("Validation error:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	userID := c.MustGet("user_id").(string)
+	req.UserID = userID
+	req.ID = pending_id
+
+	code, err := services.UpdatePendingVehicle(database.DB, req)
+	if err != nil {
+		log.Default().Println("Error fetching vehicles activities:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to get pending vehicles", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	log.Default().Println("User pending vehicles updated successfully")
+	rd := utility.BuildSuccessResponse(http.StatusOK, "User pending vehicles updated successfully", nil)
+	c.JSON(http.StatusOK, rd)
+}
+
 func GetGuestVehicleActivitiesByPlateNumber(c *gin.Context) {
 	plateNumber := c.Param("plateNumber")
 
