@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"survielx-backend/database"
-	"survielx-backend/models"
-	"survielx-backend/utility"
 	"time"
 
 	"gorm.io/gorm"
+
+	"survielx-backend/database"
+	"survielx-backend/models"
+	"survielx-backend/utility"
 )
 
 func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
@@ -38,7 +39,7 @@ func UpdateVehicle(db *gorm.DB, vehicle_id string, input models.UpdateVehicleInp
 	var vehicle models.Vehicle
 
 	exists := models.CheckExists(db, &vehicle, "id = ?", vehicle_id)
-	if !exists{
+	if !exists {
 		return nil, http.StatusNotFound, errors.New("vehicle does not exist")
 	}
 
@@ -391,7 +392,6 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string, pagination models.Pagi
 		Pagination: paginationResponse,
 	}, http.StatusOK, nil
 }
-
 
 func GetVehiclesActivities(db *gorm.DB, userID string, pagination models.Pagination) (*models.PaginatedVehicleResponse, int, error) {
 	var responses []models.VehicleActivityResponse
@@ -928,4 +928,56 @@ func GenerateActivityReport(db *gorm.DB, from, to time.Time, visitorType *models
 	}
 
 	return response, http.StatusOK, nil
+}
+
+func GetPendingVehicles(db *gorm.DB, userID string, pagination models.Pagination) (*models.PaginatedPendingVehicleResponse, int, error) {
+	var responses []models.PendingVehicleExit
+	var count int64
+
+	// Ensure the user exists
+	exists := models.CheckExists(db, &models.User{}, "id = ?", userID)
+	if !exists {
+		return nil, http.StatusNotFound, fmt.Errorf("user with ID %s not found", userID)
+	}
+
+	query := db.Model(&models.PendingVehicleExit{}).Where("user_id = ? AND status = ?", userID, "pending")
+
+	// Count total pending vehicles
+	if err := query.Count(&count).Error; err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to count pending vehicles: %v", err)
+	}
+
+	offset := (pagination.Page - 1) * pagination.Limit
+	totalPages := int(math.Ceil(float64(count) / float64(pagination.Limit)))
+
+	// Fetch pending vehicles
+	err := query.
+		Select(`
+			pending_vehicle_exits.id,
+			pending_vehicle_exits.plate_number,
+			pending_vehicle_exits.vehicle_id,
+			pending_vehicle_exits.user_id,
+			pending_vehicle_exits.exit_point_id,
+			pending_vehicle_exits.timestamp,
+			pending_vehicle_exits.status
+		`).
+		Order("pending_vehicle_exits.timestamp DESC").
+		Offset(offset).
+		Limit(pagination.Limit).
+		Scan(&responses).Error
+
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("failed to get pending vehicles: %v", err)
+	}
+
+	paginationResponse := models.PaginationResponse{
+		CurrentPage:     pagination.Page,
+		PageCount:       len(responses),
+		TotalPagesCount: totalPages,
+	}
+
+	return &models.PaginatedPendingVehicleResponse{
+		Data:       responses,
+		Pagination: paginationResponse,
+	}, http.StatusOK, nil
 }

@@ -1,10 +1,11 @@
 package models
 
 import (
-	"survielx-backend/utility"
 	"time"
 
 	"gorm.io/gorm"
+
+	"survielx-backend/utility"
 )
 
 type Vehicle struct {
