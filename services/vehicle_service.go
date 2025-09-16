@@ -17,6 +17,10 @@ import (
 func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
 	db := database.DB
 
+	if !IsValidNigerianPlate(vehicle.PlateNumber) {
+		return nil, http.StatusBadRequest, errors.New("not a valid Nigerian plate number")
+	}
+
 	checkExists := models.CheckExists(db, &models.Vehicle{}, "plate_number = ?", vehicle.PlateNumber)
 	if checkExists {
 		return nil, http.StatusConflict, fmt.Errorf("vehicle with plate number %s already exists", vehicle.PlateNumber)
