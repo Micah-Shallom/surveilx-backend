@@ -30,6 +30,8 @@ func CORSMiddleware() gin.HandlerFunc {
             "http://localhost:3000",
             "https://abunrfedusec.com",
             "https://www.abunrfedusec.com",
+            "https://abunrf-security-portal.vercel.app/",
+            "https://www.abunrf-security-portal.vercel.app/",
         }
 
         for _, o := range allowedOrigins {
