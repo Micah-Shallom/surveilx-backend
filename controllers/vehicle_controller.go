@@ -4,13 +4,14 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+
 	"survielx-backend/database"
 	"survielx-backend/models"
 	"survielx-backend/services"
 	"survielx-backend/utility"
-	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 func RegisterVehicle(c *gin.Context) {
@@ -52,7 +53,7 @@ func RegisterVehicle(c *gin.Context) {
 
 func UpdateVehicle(c *gin.Context) {
 	vehicle_id := c.Param("vehicle_id")
-	var input models.UpdateVehicleInput 
+	var input models.UpdateVehicleInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		log.Default().Println("Error binding JSON:", err)
 		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid input", err.Error(), nil)
@@ -69,7 +70,7 @@ func UpdateVehicle(c *gin.Context) {
 
 	if err := utility.ValidateUUID(vehicle_id); err != nil {
 		log.Default().Println("invalid vehicle ID:", err)
-		rd:= utility.BuildErrorResponse(http.StatusBadRequest, "error", "invalid vehicle id", err.Error(), nil)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "invalid vehicle id", err.Error(), nil)
 		c.JSON(http.StatusBadRequest, rd)
 		return
 	}
@@ -239,6 +240,70 @@ func GetVehiclesActivities(c *gin.Context) {
 
 	log.Default().Println("User vehicles activities retrieved successfully")
 	rd := utility.BuildSuccessResponse(http.StatusOK, "User vehicles activities retrieved successfully", data)
+	c.JSON(http.StatusOK, rd)
+}
+
+func GetPendingVehicles(c *gin.Context) {
+
+	userID := c.MustGet("user_id").(string)
+
+	pagination := models.GetPagination(c)
+
+	data, code, err := services.GetPendingVehicles(database.DB, userID, pagination)
+	if err != nil {
+		log.Default().Println("Error fetching vehicles activities:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to get pending vehicles", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	log.Default().Println("User pending vehicles retrieved successfully")
+	rd := utility.BuildSuccessResponse(http.StatusOK, "User pending vehicles retrieved successfully", data)
+	c.JSON(http.StatusOK, rd)
+}
+
+func UpdatePendingVehicle(c *gin.Context) {
+
+	pending_id := c.Param("pending_id")
+
+	var req models.PendingUpdateReq
+
+	err := utility.ValidateUUID(pending_id)
+	if err != nil {
+		log.Default().Println("Invalid pending ID:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid pending ID", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Default().Println("Error binding JSON:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Invalid req", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	if err := validate.Struct(req); err != nil {
+		log.Default().Println("Validation error:", err)
+		rd := utility.BuildErrorResponse(http.StatusBadRequest, "error", "Validation failed", err.Error(), nil)
+		c.JSON(http.StatusBadRequest, rd)
+		return
+	}
+
+	userID := c.MustGet("user_id").(string)
+	req.UserID = userID
+	req.ID = pending_id
+
+	code, err := services.UpdatePendingVehicle(database.DB, req)
+	if err != nil {
+		log.Default().Println("Error fetching vehicles activities:", err)
+		rd := utility.BuildErrorResponse(code, "error", "Failed to get pending vehicles", err.Error(), nil)
+		c.JSON(code, rd)
+		return
+	}
+
+	log.Default().Println("User pending vehicles updated successfully")
+	rd := utility.BuildSuccessResponse(http.StatusOK, "User pending vehicles updated successfully", nil)
 	c.JSON(http.StatusOK, rd)
 }
 
@@ -415,13 +480,12 @@ func GetVehicleOwnerProfile(c *gin.Context) {
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-    limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-    
-    pagination := models.Pagination{
-        Page:  page,
-        Limit: limit,
-    }
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
+	pagination := models.Pagination{
+		Page:  page,
+		Limit: limit,
+	}
 
 	data, code, err := services.GetVehicleOwnerProfile(database.DB, vehicleID, pagination)
 	if err != nil {

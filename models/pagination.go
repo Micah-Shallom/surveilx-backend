@@ -27,6 +27,11 @@ type PaginatedVehicleResponse struct {
 	Pagination PaginationResponse `json:"pagination"`
 }
 
+type PaginatedPendingVehicleResponse struct {
+	Data       interface{}        `json:"data"`
+	Pagination PaginationResponse `json:"pagination"`
+}
+
 func GetPagination(c *gin.Context) Pagination {
 	var (
 		page  *int

@@ -1,10 +1,11 @@
 package models
 
 import (
-	"survielx-backend/utility"
 	"time"
 
 	"gorm.io/gorm"
+
+	"survielx-backend/utility"
 )
 
 type AccessExitPoint struct {
@@ -29,4 +30,10 @@ type PendingVehicleExit struct {
 	Timestamp     time.Time `json:"timestamp" gorm:"column:timestamp"`
 	Status        string    `json:"status" gorm:"column:status"` // e.g., "pending", "approved", "denied"
 	ResponseToken string    // Optional: Unique token for secure response validation
+}
+
+type PendingUpdateReq struct {
+	ID     string `json:"id"`
+	UserID string `json:"userId" gorm:"column:user_id"`                     // Owner's user ID, for notification targeting
+	Status string `json:"status" validate:"required,oneof=confirmed denied"` // e.g., "pending", "approved", "denied"
 }
