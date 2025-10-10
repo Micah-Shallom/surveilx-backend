@@ -36,7 +36,6 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		if err != nil {
 			if err == jwt.ErrTokenExpired {
-				// Attempt to refresh the token
 				newToken, err := services.RefreshToken(tokenString)
 				if err != nil {
 					rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Failed to refresh token", err.Error(), nil)
@@ -44,9 +43,14 @@ func AuthMiddleware() gin.HandlerFunc {
 					return
 				}
 				c.Header("X-Refreshed-Token", newToken)
-				claims, _ := token.Claims.(jwt.MapClaims)
-				c.Set("user_id", claims["sub"])
-				c.Next()
+				if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+					userID, ok := claims["user_id"]
+					if !ok {
+						userID = claims["sub"]
+					}
+					c.Set("user_id", userID)
+					c.Next()
+				}
 				return
 
 			}
@@ -56,11 +60,22 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			c.Set("user_id", claims["sub"])
+			userID, ok := claims["user_id"]
+			if !ok {
+				userID = claims["sub"]
+			}
+			c.Set("user_id", userID)
 			c.Next()
 		} else {
 			rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Invalid token", nil, nil)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
 		}
+
+		if strings.Contains(c.GetHeader("Upgrade"), "websocket") {
+			// Let websocket handler handle its own auth (no Abort or Write)
+			c.Next()
+			return
+		}
+
 	}
 }

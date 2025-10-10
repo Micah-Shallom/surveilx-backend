@@ -3,6 +3,7 @@ package controllers
 import (
 	"log"
 	"net/http"
+	"survielx-backend/database"
 	"survielx-backend/services"
 	"survielx-backend/utility"
 
@@ -14,6 +15,7 @@ type VerifyVehicleInput struct {
 }
 
 func VerifyVehicle(c *gin.Context) {
+	db := database.DB
 	var input VerifyVehicleInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		log.Default().Println("Error binding JSON:", err)
@@ -22,14 +24,14 @@ func VerifyVehicle(c *gin.Context) {
 		return
 	}
 
-	vehicle, code, err := services.GetVehicleByPlateNumber(input.PlateNumber)
+	vehicle, code, err := services.GetVehicleByPlateNumber(db, input.PlateNumber)
 	if err != nil {
 		log.Default().Println("Error fetching vehicle by plate number:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Vehicle has not been registered", err.Error(), nil)
 		c.JSON(code, rd)
 		return
 	}
-	
+
 	log.Default().Println("Vehicle verification successful for plate number:", input.PlateNumber)
 	rd := utility.BuildSuccessResponse(http.StatusOK, "Vehicle is registered", vehicle)
 	c.JSON(http.StatusOK, rd)

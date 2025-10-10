@@ -269,8 +269,9 @@ func GetGuestVehicleActivitiesByPlateNumber(c *gin.Context) {
 
 func IdentifyVehicle(c *gin.Context) {
 	plateNumber := c.Param("plateNumber")
+	db := database.DB
 
-	resp, code, err := services.IdentifyVehicle(plateNumber)
+	resp, code, err := services.IdentifyVehicle(db, plateNumber)
 	if err != nil {
 		log.Default().Println("Error getting vehicle status:", err)
 		rd := utility.BuildErrorResponse(code, "error", "Failed to get vehicle status", err.Error(), nil)
@@ -293,13 +294,14 @@ func IdentifyVehicle(c *gin.Context) {
 func GetVehicleLogHistory(c *gin.Context) {
 	plateNumber := c.Param("plateNumber")
 	limitStr := c.DefaultQuery("limit", "50")
+	db := database.DB
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		limit = 50 // Default limit
 	}
 
-	vehicle, _, err := services.GetVehicleByPlateNumber(plateNumber)
+	vehicle, _, err := services.GetVehicleByPlateNumber(db, plateNumber)
 	if err != nil {
 		rd := utility.BuildErrorResponse(http.StatusNotFound, "error", "Vehicle not found", err.Error(), nil)
 		c.JSON(http.StatusNotFound, rd)

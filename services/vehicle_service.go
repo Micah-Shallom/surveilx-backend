@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strings"
 	"survielx-backend/database"
 	"survielx-backend/models"
 	"survielx-backend/utility"
@@ -25,6 +26,8 @@ func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
 		return nil, http.StatusConflict, fmt.Errorf("vehicle with plate number %s already exists", vehicle.PlateNumber)
 	}
 
+	vehicle.PlateNumber = strings.TrimSpace(vehicle.PlateNumber)
+
 	if err := db.Create(vehicle).Error; err != nil {
 		return nil, http.StatusBadRequest, err
 	}
@@ -42,7 +45,7 @@ func UpdateVehicle(db *gorm.DB, vehicle_id string, input models.UpdateVehicleInp
 	var vehicle models.Vehicle
 
 	exists := models.CheckExists(db, &vehicle, "id = ?", vehicle_id)
-	if !exists{
+	if !exists {
 		return nil, http.StatusNotFound, errors.New("vehicle does not exist")
 	}
 
@@ -74,9 +77,9 @@ func DeRegisterVehicle(db *gorm.DB, vehicle_id string) (int, error) {
 	return http.StatusOK, nil
 }
 
-func GetVehicleByPlateNumber(plateNumber string) (*models.Vehicle, int, error) {
+func GetVehicleByPlateNumber(db *gorm.DB, plateNumber string) (*models.Vehicle, int, error) {
 	var vehicle models.Vehicle
-	if err := database.DB.Where("plate_number = ?", plateNumber).First(&vehicle).Error; err != nil {
+	if err := db.Where("plate_number = ?", plateNumber).First(&vehicle).Error; err != nil {
 		return nil, http.StatusNotFound, fmt.Errorf("failed to fetch plate number: %v", err)
 	}
 	return &vehicle, http.StatusOK, nil
@@ -120,7 +123,7 @@ func LogVehicleActivity(db *gorm.DB, req models.LogVehicleActivityInput) (int, e
 		activity.ExitPointID = &req.ExitPointID
 	}
 
-	vehicle, _, err := GetVehicleByPlateNumber(req.PlateNumber)
+	vehicle, _, err := GetVehicleByPlateNumber(db, req.PlateNumber)
 	if err != nil {
 		return http.StatusNotFound, fmt.Errorf("registered vehicle not found: %v", err)
 	}
@@ -239,8 +242,8 @@ func CreateVehicleLog(vehicle *models.Vehicle, req models.LogVehicleInput) (*mod
 }
 
 // the model backend calls this to find out if the vehicle exists either as a registered user or guest user
-func IdentifyVehicle(plateNumber string) (models.VehicleIdentity, int, error) {
-	vehicle, statuscode, err := GetVehicleByPlateNumber(plateNumber)
+func IdentifyVehicle(db *gorm.DB, plateNumber string) (models.VehicleIdentity, int, error) {
+	vehicle, statuscode, err := GetVehicleByPlateNumber(db, plateNumber)
 	if err != nil {
 		// if not record found...security personnel should log this vehicle entry as a guest entry
 		return models.VehicleIdentity{}, statuscode, err
@@ -395,7 +398,6 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string, pagination models.Pagi
 		Pagination: paginationResponse,
 	}, http.StatusOK, nil
 }
-
 
 func GetVehiclesActivities(db *gorm.DB, userID string, pagination models.Pagination) (*models.PaginatedVehicleResponse, int, error) {
 	var responses []models.VehicleActivityResponse

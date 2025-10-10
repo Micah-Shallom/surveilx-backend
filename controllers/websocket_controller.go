@@ -27,13 +27,6 @@ func WSHandler(c *gin.Context) {
 		return
 	}
 
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		log.Println("WS upgrade error:", err)
-		return
-	}
-	defer conn.Close()
-
 	claims := jwt.MapClaims{}
 	parsedToken, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(os.Getenv("JWT_SECRET")), nil
@@ -50,11 +43,18 @@ func WSHandler(c *gin.Context) {
 		return
 	}
 
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Println("WS upgrade error:", err)
+		return
+	}
+	defer conn.Close()
+
+	log.Println("WS connection established for user:", userID)
 	connections.StoreClient(userID, conn)
 	defer connections.DeleteClient(userID)
 
 	for {
-
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("WS read error:", err)
