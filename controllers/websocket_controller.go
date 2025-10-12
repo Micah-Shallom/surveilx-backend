@@ -37,7 +37,7 @@ func WSHandler(c *gin.Context) {
 		return
 	}
 
-	userID, ok := claims["sub"].(string)
+	userID, ok := claims["user_id"].(string)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
 		return

@@ -13,9 +13,6 @@ import (
 
 	"gorm.io/gorm"
 
-	"survielx-backend/database"
-	"survielx-backend/models"
-	"survielx-backend/utility"
 )
 
 func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
