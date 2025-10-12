@@ -14,20 +14,46 @@ import (
 	"gorm.io/gorm"
 )
 
-func notifyUserForExitConfirmation(pendingID, userID, token string) {
-	var (
-		 pending models.PendingVehicleExit
-		 vehicle models.Vehicle
-	)
+// Add this function to verify connection before sending
+func isConnectionAlive(userID string) bool {
 	connInterface, ok := connections.Clients.Load(userID)
 	if !ok {
-		log.Println("User not connected:", userID)
+		return false
+	}
+
+	conn := connInterface.(*websocket.Conn)
+
+	// Try to send a ping to verify connection
+	if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(5*time.Second)); err != nil {
+		log.Printf("Connection dead for user %s: %v", userID, err)
+		connections.DeleteClient(userID)
+		return false
+	}
+
+	return true
+}
+
+func notifyUserForExitConfirmation(pendingID, userID, token string) {
+	var (
+		pending models.PendingVehicleExit
+		vehicle models.Vehicle
+	)
+
+	// CRITICAL: Check if connection is alive first
+	if !isConnectionAlive(userID) {
+		log.Println("❌ User not connected or connection dead:", userID)
+		return
+	}
+
+	connInterface, ok := connections.Clients.Load(userID)
+	if !ok {
+		log.Println("❌ User not connected:", userID)
 		return
 	}
 	conn := connInterface.(*websocket.Conn)
 
 	tx := database.DB.Where("id = ?", pendingID).First(&pending)
-	if tx.Error != nil{
+	if tx.Error != nil {
 		log.Default().Println("unable to fetch pending vehicle information", tx.Error.Error())
 		return
 	}
@@ -39,15 +65,22 @@ func notifyUserForExitConfirmation(pendingID, userID, token string) {
 	}
 
 	msg := map[string]any{
-		"type":       "exit_confirmation",
-		"message":    "Are you the one leaving the premises?",
-		"pending_id": pendingID,
-		"token":      token,
+		"type":        "exit_confirmation",
+		"message":     "Are you the one leaving the premises?",
+		"pending_id":  pendingID,
+		"token":       token,
 		"plateNumber": pending.PlateNumber,
 		"vehicleName": vehicle.Model,
 	}
+
+	log.Printf("📤 Sending exit confirmation to user %s for pending %s", userID, pendingID)
+
 	if err := conn.WriteJSON(msg); err != nil {
-		log.Println("WS write error:", err)
+		log.Println("❌ WS write error:", err)
+		// Connection is dead, remove it
+		connections.DeleteClient(userID)
+	} else {
+		log.Println("✅ Exit confirmation sent successfully")
 	}
 }
 
@@ -101,10 +134,9 @@ func handleExitTimeout(pendingID string, db *gorm.DB, exitPointID string) {
 
 func notifySecurity(plateNumber string, timestamp time.Time, apID string) {
 	var (
-		user models.User
+		user      models.User
 		exitPoint models.AccessExitPoint
 	)
-
 
 	tx := database.DB.Model(&models.User{}).Where("role = ?", "security").Find(&user)
 	if tx.Error != nil {

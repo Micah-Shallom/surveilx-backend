@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"gorm.io/gorm"
-
 )
 
 func RegisterVehicle(vehicle *models.Vehicle) (*models.Vehicle, int, error) {
@@ -194,7 +193,7 @@ func HandleExitProcedures(db *gorm.DB, activity models.VehicleActivity, vehicle 
 	//trigger notification to vehicle owner for exit approval
 	go notifyUserForExitConfirmation(pending.ID, vehicle.UserID, responseToken)
 
-	go handleExitTimeout(pending.ID, db, pending.ExitPointID)
+	// go handleExitTimeout(pending.ID, db, pending.ExitPointID)
 
 	return http.StatusAccepted, nil
 }
