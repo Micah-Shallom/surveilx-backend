@@ -369,6 +369,7 @@ func GetVehicleActivities(db *gorm.DB, vehicle_id string, pagination models.Pagi
             vehicle_activities.is_entry,
             vehicle_activities.vehicle_type,
             vehicle_activities.timestamp,
+			vehicle_activities.model,
 			CASE 
 				WHEN vehicle_activities.is_entry = true THEN entry_points.name
 				ELSE exit_points.name
