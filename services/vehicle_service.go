@@ -553,27 +553,26 @@ func validateGuestEntryExit(db *gorm.DB, plateNumber string, isEntry bool) error
 func GetAllVehicleActivities(from, to time.Time, visitorType *models.VisitorType) ([]models.VehicleActivityResponse, error) {
 	db := database.DB
 	var activities []models.VehicleActivity
-
-	query := db.Preload("Vehicle").
-		Preload("EntryPoint").
+	
+	query := db.Preload("EntryPoint").
 		Preload("ExitPoint").
 		Where("timestamp BETWEEN ? AND ?", from, to)
-
+	
 	if visitorType != nil {
 		query = query.Where("visitor_type = ?", *visitorType)
 	}
-
+	
 	query = query.Order("timestamp desc")
-
+	
 	if err := query.Find(&activities).Error; err != nil {
 		return nil, fmt.Errorf("failed to get activities: %v", err)
 	}
-
+	
 	responses := make([]models.VehicleActivityResponse, len(activities))
 	for i, activity := range activities {
 		responses[i] = convertToActivityResponse(activity)
 	}
-
+	
 	return responses, nil
 }
 

@@ -43,7 +43,22 @@ func AuthMiddleware() gin.HandlerFunc {
 					return
 				}
 				c.Header("X-Refreshed-Token", newToken)
-				if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+
+				// Parse the NEW refreshed token to get valid claims
+				refreshedToken, err := jwt.Parse(newToken, func(token *jwt.Token) (any, error) {
+					if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+						return nil, jwt.ErrSignatureInvalid
+					}
+					return []byte(os.Getenv("JWT_SECRET")), nil
+				})
+
+				if err != nil || !refreshedToken.Valid {
+					rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Failed to validate refreshed token", err.Error(), nil)
+					c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
+					return
+				}
+
+				if claims, ok := refreshedToken.Claims.(jwt.MapClaims); ok {
 					userID, ok := claims["user_id"]
 					if !ok {
 						userID = claims["sub"]
@@ -52,8 +67,8 @@ func AuthMiddleware() gin.HandlerFunc {
 					c.Next()
 				}
 				return
-
 			}
+
 			rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Invalid token", err.Error(), nil)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
 			return
@@ -70,12 +85,5 @@ func AuthMiddleware() gin.HandlerFunc {
 			rd := utility.BuildErrorResponse(http.StatusUnauthorized, "error", "Invalid token", nil, nil)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, rd)
 		}
-
-		if strings.Contains(c.GetHeader("Upgrade"), "websocket") {
-			// Let websocket handler handle its own auth (no Abort or Write)
-			c.Next()
-			return
-		}
-
 	}
 }

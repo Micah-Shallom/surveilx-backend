@@ -9,7 +9,7 @@ import (
 )
 
 func SecurityMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
+	return func(c *gin.Context){
 		userID := c.MustGet("user_id").(string)
 		user, err := services.GetUserByID(userID)
 		if err != nil {

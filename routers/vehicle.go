@@ -23,7 +23,7 @@ func VehicleActivityRoutes(r *gin.Engine, api_version string) {
 		activityRoutes.GET("/:vehicle_id/activities", controllers.GetVehicleActivities)
 	}
 
-	securityRoutes := r.Group(fmt.Sprintf("%v/security", api_version), middleware.AuthMiddleware(), middleware.SecurityMiddleware())
+	securityRoutes := r.Group(fmt.Sprintf("%v/security", api_version), middleware.AuthMiddleware())
 	{
 		securityRoutes.POST("/log-vehicle", controllers.LogVehicleActivity)
 		securityRoutes.POST("/log-guest-vehicle", controllers.LogGuestVehicleActivity)
